@@ -44,3 +44,20 @@ test('retorna lista vazia para CSV vazio', () => {
   assert.deepEqual(interpretarCsv(''), []);
   assert.deepEqual(interpretarCsv('   \n  \n'), []);
 });
+
+// Regressao (2026-09-28): CSV exportado do Excel/Sheets em pt-BR usa ";"
+// como separador de coluna (a virgula ja e o separador decimal nesse
+// locale) — antes disso o parser so entendia virgula e a linha inteira
+// virava uma unica chave, com valor e periodo vazios.
+test('interpreta CSV com ponto-e-virgula (padrao Excel/Sheets em pt-BR) e virgula decimal', () => {
+  const csv = 'chave;valor;periodo\npercentual_investido_saude;7,8;2026';
+  const valores = interpretarCsv(csv);
+
+  assert.equal(valores.length, 1);
+  assert.deepEqual(valores[0], {
+    chave: 'percentual_investido_saude',
+    valorNumerico: 7.8,
+    valorTexto: null,
+    periodoReferencia: '2026',
+  });
+});
