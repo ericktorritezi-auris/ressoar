@@ -1,0 +1,1 @@
+Pasta onde os brasões enviados por upload (módulo Municípios) são salvos. Mantida no Git apenas para a pasta existir; os arquivos enviados em produção não são versionados (ver `.gitignore`). Ver também a observação sobre armazenamento não-persistente no formulário de município.

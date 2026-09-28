@@ -1,0 +1,138 @@
+// Acesso a dados de municipios. Sempre dentro de withTenantContext: um
+// gestor_carteira so consegue ver/editar o proprio municipio; o master ve
+// todos (secao 2 e 8 do mapeamento).
+
+const { withTenantContext } = require('../../config/db');
+
+function contextoDe(tenant) {
+  return { municipioId: tenant.municipioId, isMaster: tenant.isMaster };
+}
+
+async function listar(tenant) {
+  return withTenantContext(contextoDe(tenant), async (client) => {
+    const { rows } = await client.query(
+      `SELECT id, codigo_ibge, nome, uf, populacao, brasao_url,
+              contrato_inicio, contrato_vigencia, gestor_carteira_id,
+              eh_municipio_teste, criado_em
+         FROM municipios
+        ORDER BY nome`
+    );
+    return rows;
+  });
+}
+
+async function buscarPorId(tenant, id) {
+  return withTenantContext(contextoDe(tenant), async (client) => {
+    const { rows } = await client.query(
+      `SELECT id, codigo_ibge, nome, uf, populacao, brasao_url,
+              contrato_inicio, contrato_vigencia, gestor_carteira_id,
+              eh_municipio_teste, criado_em
+         FROM municipios
+        WHERE id = $1`,
+      [id]
+    );
+    return rows[0] || null;
+  });
+}
+
+async function criar(tenant, dados) {
+  return withTenantContext(contextoDe(tenant), async (client) => {
+    const { rows } = await client.query(
+      `INSERT INTO municipios
+         (codigo_ibge, nome, uf, populacao, brasao_url, contrato_inicio,
+          contrato_vigencia, gestor_carteira_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id`,
+      [
+        dados.codigoIbge || null,
+        dados.nome,
+        dados.uf,
+        dados.populacao || null,
+        dados.brasaoUrl || null,
+        dados.contratoInicio || null,
+        dados.contratoVigencia || null,
+        dados.gestorCarteiraId || null,
+      ]
+    );
+    return rows[0].id;
+  });
+}
+
+async function atualizar(tenant, id, dados) {
+  return withTenantContext(contextoDe(tenant), (client) =>
+    client.query(
+      `UPDATE municipios
+          SET nome = $1, uf = $2, populacao = $3, brasao_url = $4,
+              contrato_inicio = $5, contrato_vigencia = $6, gestor_carteira_id = $7
+        WHERE id = $8`,
+      [
+        dados.nome,
+        dados.uf,
+        dados.populacao || null,
+        dados.brasaoUrl || null,
+        dados.contratoInicio || null,
+        dados.contratoVigencia || null,
+        dados.gestorCarteiraId || null,
+        id,
+      ]
+    )
+  );
+}
+
+async function atualizarPopulacao(tenant, id, populacao) {
+  return withTenantContext(contextoDe(tenant), (client) =>
+    client.query('UPDATE municipios SET populacao = $1 WHERE id = $2', [populacao, id])
+  );
+}
+
+async function listarGestoresCarteira(tenant) {
+  return withTenantContext(contextoDe(tenant), async (client) => {
+    const { rows } = await client.query(
+      `SELECT id, nome FROM usuarios WHERE perfil IN ('master', 'gestor_carteira') AND ativo ORDER BY nome`
+    );
+    return rows;
+  });
+}
+
+async function salvarSnapshotLinhaBase(tenant, municipioId, codigoIbge, valores) {
+  return withTenantContext(contextoDe(tenant), async (client) => {
+    await client.query('BEGIN');
+    try {
+      for (const v of valores) {
+        await client.query(
+          `INSERT INTO snapshots_linha_base (municipio_id, codigo_ibge, chave, valor_numerico, valor_texto)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [municipioId, codigoIbge, v.chave, v.valorNumerico ?? null, v.valorTexto ?? null]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (erro) {
+      await client.query('ROLLBACK');
+      throw erro;
+    }
+  });
+}
+
+async function buscarSnapshotLinhaBase(tenant, municipioId) {
+  return withTenantContext(contextoDe(tenant), async (client) => {
+    const { rows } = await client.query(
+      `SELECT chave, valor_numerico, valor_texto, congelado_em
+         FROM snapshots_linha_base
+        WHERE municipio_id = $1
+        ORDER BY congelado_em DESC`,
+      [municipioId]
+    );
+    return rows;
+  });
+}
+
+module.exports = {
+  listar,
+  buscarPorId,
+  criar,
+  atualizar,
+  atualizarPopulacao,
+  listarGestoresCarteira,
+  salvarSnapshotLinhaBase,
+  buscarSnapshotLinhaBase,
+};

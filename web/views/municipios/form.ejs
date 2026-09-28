@@ -1,0 +1,73 @@
+<%
+function dataInputValue(v) {
+  if (!v) return '';
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  return String(v).slice(0, 10);
+}
+%>
+<%- include('../partials/shell-inicio', { titulo: municipio ? 'Editar município' : 'Novo município', paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1><%= municipio ? 'Editar ' + municipio.nome : 'Novo município' %></h1>
+  <a href="/municipios" style="font-size:13px">← Voltar</a>
+</div>
+
+<% if (erro) { %><div class="rsr-erro" style="margin-bottom:16px"><%= erro %></div><% } %>
+
+<div class="rsr-card">
+  <form method="POST" action="<%= municipio ? '/municipios/' + municipio.id : '/municipios' %>" enctype="multipart/form-data">
+    <div class="rsr-form-grid">
+      <div>
+        <label class="rsr-label">Código IBGE <% if (!municipio) { %>(preenche nome, UF, população e área automaticamente)<% } %></label>
+        <input class="rsr-input" type="text" name="codigo_ibge" maxlength="7" pattern="\d{7}"
+               value="<%= municipio ? municipio.codigo_ibge || '' : '' %>" <%= municipio ? 'readonly' : '' %>
+               placeholder="Ex.: 4116703">
+      </div>
+      <div>
+        <label class="rsr-label">Nome do município</label>
+        <input class="rsr-input" type="text" name="nome" required value="<%= municipio ? municipio.nome || '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">UF</label>
+        <input class="rsr-input" type="text" name="uf" maxlength="2" required style="text-transform:uppercase" value="<%= municipio ? municipio.uf || '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">População (se não usar código IBGE)</label>
+        <input class="rsr-input" type="number" name="populacao" value="<%= municipio ? municipio.populacao || '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">Início do contrato</label>
+        <input class="rsr-input" type="date" name="contrato_inicio" value="<%= municipio ? dataInputValue(municipio.contrato_inicio) : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">Vigência do contrato</label>
+        <input class="rsr-input" type="text" name="contrato_vigencia" placeholder="Ex.: 12 meses" value="<%= municipio ? municipio.contrato_vigencia || '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">Gestor de carteira responsável</label>
+        <select class="rsr-input" name="gestor_carteira_id">
+          <option value="">— Não atribuído —</option>
+          <% gestores.forEach((g) => { %>
+            <option value="<%= g.id %>" <%= municipio && municipio.gestor_carteira_id === g.id ? 'selected' : '' %>><%= g.nome %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="rsr-label">Brasão — link (recomendado)</label>
+        <input class="rsr-input" type="url" name="brasao_url" placeholder="https://…" value="<%= municipio ? municipio.brasao_url || '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">Brasão — arquivo (alternativa, só se não tiver link)</label>
+        <input class="rsr-input" type="file" name="brasao_arquivo" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="padding-top:9px">
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text-soft);margin:14px 0 0">
+      Observação: dê preferência ao link sempre que possível — o upload fica salvo no servidor da aplicação, que
+      não é persistente em todo redeploy, até a Fase 2 ligar um armazenamento externo de arquivos (decisão já
+      tomada no mapeamento, seção 8). Se os dois forem preenchidos, o link é usado e o arquivo é ignorado.
+    </p>
+    <div style="margin-top:22px">
+      <button class="rsr-btn rsr-btn-primario" type="submit" style="padding:0 24px;width:auto">Salvar</button>
+    </div>
+  </form>
+</div>
+<%- include('../partials/shell-fim', { versao: versao }) %>

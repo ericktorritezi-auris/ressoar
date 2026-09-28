@@ -1,0 +1,67 @@
+<%- include('../partials/shell-inicio', { titulo: registro ? 'Editar usuário' : 'Novo usuário', paginaAtiva: 'usuarios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1><%= registro ? 'Editar ' + registro.nome : 'Novo usuário' %></h1>
+  <a href="/usuarios" style="font-size:13px">← Voltar</a>
+</div>
+
+<% if (erro) { %><div class="rsr-erro" style="margin-bottom:16px"><%= erro %></div><% } %>
+<% if (!registro) { %>
+  <p style="font-size:13px;color:var(--text-soft);margin:0 0 16px">
+    Ao salvar, o usuário recebe um e-mail com um link para definir a própria senha de primeiro acesso.
+  </p>
+<% } %>
+
+<div class="rsr-card">
+  <form method="POST" action="<%= registro ? '/usuarios/' + registro.id : '/usuarios' %>">
+    <div class="rsr-form-grid">
+      <div>
+        <label class="rsr-label">Nome completo</label>
+        <input class="rsr-input" type="text" name="nome" required value="<%= registro ? registro.nome || '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">E-mail</label>
+        <input class="rsr-input" type="email" name="email" required <%= registro ? 'readonly' : '' %>
+               value="<%= registro ? registro.email || '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">Perfil de acesso</label>
+        <select class="rsr-input" name="perfil" required>
+          <% perfis.forEach((p) => { %>
+            <option value="<%= p.valor %>" <%= registro && registro.perfil === p.valor ? 'selected' : '' %>><%= p.rotulo %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="rsr-label">Município de vínculo (perfis municipais)</label>
+        <select class="rsr-input" name="municipio_id">
+          <option value="">— Não se aplica (master/administrador) —</option>
+          <% municipios.forEach((m) => { %>
+            <option value="<%= m.id %>" <%= registro && registro.municipio_id === m.id ? 'selected' : '' %>><%= m.nome %> — <%= m.uf %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="rsr-label">CPF</label>
+        <input class="rsr-input" type="text" name="cpf" value="<%= registro ? registro.cpf || '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">Matrícula</label>
+        <input class="rsr-input" type="text" name="matricula" value="<%= registro ? registro.matricula || '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">Cargo</label>
+        <input class="rsr-input" type="text" name="cargo" value="<%= registro ? registro.cargo || '' : '' %>">
+      </div>
+      <% if (registro) { %>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:26px">
+          <input type="checkbox" id="ativo" name="ativo" <%= registro.ativo !== false ? 'checked' : '' %>>
+          <label for="ativo" style="font-size:13px">Usuário ativo</label>
+        </div>
+      <% } %>
+    </div>
+    <div style="margin-top:22px">
+      <button class="rsr-btn rsr-btn-primario" type="submit" style="padding:0 24px;width:auto">Salvar</button>
+    </div>
+  </form>
+</div>
+<%- include('../partials/shell-fim', { versao: versao }) %>

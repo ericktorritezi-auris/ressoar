@@ -1,0 +1,64 @@
+<%- include('../partials/shell-inicio', { titulo: indicador ? 'Editar indicador' : 'Novo indicador', paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1><%= indicador ? 'Editar indicador' : 'Novo indicador' %> — <%= municipio.nome %></h1>
+  <a href="/municipios/<%= municipio.id %>" style="font-size:13px">← Voltar ao município</a>
+</div>
+
+<% if (erro) { %><div class="rsr-erro" style="margin-bottom:16px"><%= erro %></div><% } %>
+
+<div class="rsr-card">
+  <form method="POST" action="<%= indicador ? '/municipios/' + municipio.id + '/indicadores/' + indicador.id : '/municipios/' + municipio.id + '/indicadores' %>">
+    <div class="rsr-form-grid">
+      <div>
+        <label class="rsr-label">Eixo do programa</label>
+        <select class="rsr-input" name="eixo_id" required>
+          <% eixos.forEach((e) => { %>
+            <option value="<%= e.id %>" <%= indicador && indicador.eixo_id === e.id ? 'selected' : '' %>><%= e.codigo %>. <%= e.nome %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="rsr-label">Nome do indicador</label>
+        <input class="rsr-input" type="text" name="nome" required value="<%= indicador ? indicador.nome || '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">Linha de base</label>
+        <input class="rsr-input" type="number" step="any" name="linha_base" value="<%= indicador ? indicador.linha_base ?? '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">Meta</label>
+        <input class="rsr-input" type="number" step="any" name="meta" value="<%= indicador ? indicador.meta ?? '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">Unidade</label>
+        <input class="rsr-input" type="text" name="unidade" placeholder="Ex.: %, pessoas, escolas" value="<%= indicador ? indicador.unidade || '' : '' %>">
+      </div>
+      <div>
+        <label class="rsr-label">Periodicidade de medição</label>
+        <select class="rsr-input" name="periodicidade" required>
+          <% ['mensal','bimestral','trimestral','semestral','anual'].forEach((p) => { %>
+            <option value="<%= p %>" <%= indicador && indicador.periodicidade === p ? 'selected' : '' %>><%= p.charAt(0).toUpperCase() + p.slice(1) %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="rsr-label">Fonte do dado</label>
+        <select class="rsr-input" name="fonte_dado" required>
+          <option value="planilha" <%= indicador && indicador.fonte_dado === 'planilha' ? 'selected' : '' %>>Planilha importada</option>
+          <option value="formulario" <%= indicador && indicador.fonte_dado === 'formulario' ? 'selected' : '' %>>Formulário</option>
+          <option value="dado_publico" <%= indicador && indicador.fonte_dado === 'dado_publico' ? 'selected' : '' %>>Dado público</option>
+        </select>
+      </div>
+      <% if (indicador) { %>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:26px">
+          <input type="checkbox" id="ativo" name="ativo" <%= indicador.ativo !== false ? 'checked' : '' %>>
+          <label for="ativo" style="font-size:13px">Indicador ativo</label>
+        </div>
+      <% } %>
+    </div>
+    <div style="margin-top:22px">
+      <button class="rsr-btn rsr-btn-primario" type="submit" style="padding:0 24px;width:auto">Salvar</button>
+    </div>
+  </form>
+</div>
+<%- include('../partials/shell-fim', { versao: versao }) %>

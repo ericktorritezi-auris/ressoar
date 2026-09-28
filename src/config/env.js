@@ -17,7 +17,9 @@ const env = {
   DATABASE_URL: process.env.DATABASE_URL,
   SESSION_SECRET: process.env.SESSION_SECRET || 'dev-secret-nao-usar-em-producao',
   RESEND_API_KEY: process.env.RESEND_API_KEY,
-  EMAIL_REMETENTE: process.env.EMAIL_REMETENTE || 'naoresponda@ressoar.belleplanner.com.br',
+  EMAIL_REMETENTE: process.env.EMAIL_REMETENTE || 'noreply@belleplanner.com.br',
+  // Base usada para montar links em e-mail (convite, redefinicao de senha).
+  APP_URL: process.env.APP_URL || 'https://ressoar.belleplanner.com.br',
   // Versao exibida automaticamente no rodape de todas as paginas (secao 8 do mapeamento).
   RESSOAR_VERSION: process.env.RESSOAR_VERSION || '0.1.0-dev',
   // Quantos dias um dispositivo fica "confiavel" sem pedir novo codigo de 2FA
