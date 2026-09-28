@@ -1,0 +1,13 @@
+<%- include('partials/shell-inicio', { titulo: 'Ajuda', paginaAtiva: 'ajuda', usuario: usuario, versao: versao }) %>
+<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:14px;padding:22px">
+  <!-- Menu de Ajuda dinamico (secao 6.5 do mapeamento): o conteudo abaixo
+       muda de acordo com o perfil logado. Nesta fase so o esqueleto —
+       o conteudo completo por perfil entra junto dos modulos de cada fase. -->
+  <h2 style="margin-top:0;font-family:var(--font-display)">Ajuda</h2>
+  <% if (['master','gestor_carteira'].includes(usuario.perfil)) { %>
+    <p style="font-size:14px;color:var(--text-soft)">Como master/gestor de carteira, você pode cadastrar municípios, aprovar planilhas e formulários, e gerenciar propostas comerciais.</p>
+  <% } else { %>
+    <p style="font-size:14px;color:var(--text-soft)">Aqui você acompanha os indicadores do seu município. Este painel é somente leitura.</p>
+  <% } %>
+</div>
+<%- include('partials/shell-fim', { versao: versao }) %>

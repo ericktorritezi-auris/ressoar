@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= titulo %> · Ressoar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/tema.css">
+</head>
+<body>
+<script>
+  // Aplica o tema antes do primeiro paint, para nao "piscar" claro->escuro.
+  (function(){
+    try {
+      var salvo = localStorage.getItem('rsr-theme');
+      var tema = salvo || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-rsr-theme', tema);
+    } catch (e) {}
+  })();
+</script>

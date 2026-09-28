@@ -1,0 +1,29 @@
+<%- include('../partials/cabecalho-publico', { titulo: 'Entrar' }) %>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+  <div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-family:var(--font-display);font-weight:800;font-size:20px">Ressoar</span>
+    </div>
+    <h1 style="margin:0;font-family:var(--font-display);font-weight:800;font-size:24px">Entrar</h1>
+
+    <% if (erro) { %>
+      <div class="rsr-erro"><%= erro %></div>
+    <% } %>
+
+    <form method="POST" action="/login" style="display:flex;flex-direction:column;gap:16px">
+      <div>
+        <label class="rsr-label" for="email">E-mail</label>
+        <input class="rsr-input" type="email" id="email" name="email" required autofocus>
+      </div>
+      <div>
+        <label class="rsr-label" for="senha">Senha</label>
+        <input class="rsr-input" type="password" id="senha" name="senha" required>
+      </div>
+      <button class="rsr-btn rsr-btn-primario" type="submit">Entrar</button>
+    </form>
+
+    <a href="/esqueci-senha" style="font-size:13px;color:var(--text-soft)">Esqueci minha senha</a>
+    <button data-rsr-toggle-tema class="rsr-btn" style="align-self:flex-start;background:none;color:var(--text-soft);font-size:13px;padding:0">Alternar tema claro/escuro</button>
+  </div>
+</div>
+<%- include('../partials/rodape-publico') %>

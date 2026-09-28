@@ -1,0 +1,10 @@
+<%- include('partials/shell-inicio', { titulo: 'Painel', paginaAtiva: 'painel', usuario: usuario, versao: versao }) %>
+<div style="display:flex;flex-direction:column;gap:16px">
+  <div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:14px;padding:22px">
+    <p style="margin:0;font-size:14px;color:var(--text-soft)">
+      Fundação técnica da Fase 1 no ar: login, 2FA, tema claro/escuro e este shell base.
+      Os módulos de indicadores, formulários e dashboards chegam nas próximas fases.
+    </p>
+  </div>
+</div>
+<%- include('partials/shell-fim', { versao: versao }) %>

@@ -1,0 +1,30 @@
+<!-- Menu lateral unico e compartilhado (secao 9 do mapeamento): nunca
+     recriado por pagina — toda tela autenticada inclui este mesmo shell. -->
+<%- include('cabecalho-publico', { titulo: titulo }) %>
+<div class="rsr-shell">
+  <div class="rsr-scrim" data-rsr-toggle-menu></div>
+  <nav class="rsr-sidebar">
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 10px 22px">
+      <span style="font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff">Ressoar</span>
+    </div>
+    <a class="rsr-navitem <%= paginaAtiva === 'painel' ? 'ativo' : '' %>" href="/painel">Painel</a>
+    <% if (['master','gestor_carteira'].includes(usuario.perfil)) { %>
+      <a class="rsr-navitem <%= paginaAtiva === 'municipios' ? 'ativo' : '' %>" href="/municipios">Municípios</a>
+    <% } %>
+    <div style="margin-top:auto">
+      <a class="rsr-navitem" href="/ajuda">Ajuda</a>
+      <form method="POST" action="/logout">
+        <button class="rsr-btn rsr-navitem" type="submit" style="background:none;width:100%;text-align:left">Sair</button>
+      </form>
+    </div>
+  </nav>
+  <div class="rsr-main">
+    <div class="rsr-topbar">
+      <button class="rsr-btn" data-rsr-toggle-menu style="background:none;display:none" aria-label="Abrir menu">☰</button>
+      <span style="font-weight:700;font-size:15px"><%= titulo %></span>
+      <div style="display:flex;align-items:center;gap:14px">
+        <button data-rsr-toggle-tema class="rsr-btn" style="background:none;color:var(--text-soft)" aria-label="Alternar tema">◐</button>
+        <span style="font-size:13px;color:var(--text-soft)"><%= usuario.nome %></span>
+      </div>
+    </div>
+    <div class="rsr-conteudo">
