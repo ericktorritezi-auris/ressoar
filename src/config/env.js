@@ -25,6 +25,14 @@ const env = {
   // Quantos dias um dispositivo fica "confiavel" sem pedir novo codigo de 2FA
   // (mitigacao de volume de e-mail, secao 13 do mapeamento).
   TRUSTED_DEVICE_DIAS: parseInt(process.env.TRUSTED_DEVICE_DIAS || '30', 10),
+  // Usadas so por src/db/seed.js para criar o primeiro usuario master, na
+  // primeira vez que o sistema sobe (sem elas, o seed avisa e nao cria
+  // ninguem — nao ha usuario nenhum ate isso acontecer). Nao sao
+  // obrigatorias aqui porque, depois do master criado, podem ser
+  // removidas do ambiente sem quebrar nada.
+  MASTER_EMAIL: process.env.MASTER_EMAIL,
+  MASTER_SENHA: process.env.MASTER_SENHA,
+  MASTER_NOME: process.env.MASTER_NOME || 'Erick Torritezi',
 };
 
 function validar() {
