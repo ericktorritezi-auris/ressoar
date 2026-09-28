@@ -35,6 +35,15 @@ test('GET /login responde 200 (tela publica)', async () => {
   await new Promise((resolve) => servidor.close(resolve));
 });
 
+// Regressao: sem "trust proxy", o Express nao reconhece que o Railway
+// termina o HTTPS na borda e o cookie-session recusa gravar o cookie
+// "secure" (login "funciona" mas ninguem fica autenticado — foi exatamente
+// o bug encontrado em producao na Fase 2). Nao da pra testar o fluxo
+// completo aqui sem banco, mas a config em si nao pode regredir sem aviso.
+test('app confia no proxy (necessario para o cookie de sessao "secure" funcionar atras do Railway)', () => {
+  assert.ok(app.get('trust proxy'), 'app.set("trust proxy", ...) precisa estar configurado em src/server.js');
+});
+
 // As rotas da Fase 2 (municipios, usuarios, indicadores, central de
 // atualizacoes) exigem autenticacao antes de qualquer coisa — nenhuma
 // delas deve responder sem sessao, mesmo sem banco disponivel neste teste.

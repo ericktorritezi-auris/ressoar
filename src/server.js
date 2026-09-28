@@ -13,6 +13,14 @@ const rotasCentralAtualizacoes = require('./modules/central-atualizacoes/rotas')
 
 const app = express();
 
+// O Railway termina o HTTPS na borda e encaminha a conexao para o
+// container como HTTP simples por dentro. Sem isto, o Express nao sabe
+// que a conexao original do navegador foi HTTPS — e o modulo de sessao
+// (abaixo, cookie "secure") recusa silenciosamente gravar o cookie,
+// achando que a conexao nao e segura. "1" = confia no 1o proxy na frente
+// (o proprio Railway), que e exatamente a topologia daqui.
+app.set('trust proxy', 1);
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '..', 'web', 'views'));
 app.locals.versao = env.RESSOAR_VERSION;
