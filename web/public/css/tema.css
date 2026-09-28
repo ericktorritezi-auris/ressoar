@@ -234,6 +234,108 @@ a { color: var(--accent); }
   font-size: 13px;
 }
 
+/* ---- Cabecalho de entidade (municipio): brasao + nome, reaproveitavel
+   em qualquer tela que precise identificar visualmente uma entidade ---- */
+.rsr-entidade-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.rsr-brasao {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.rsr-entidade-header h1 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.rsr-entidade-header .rsr-entidade-sub {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+
+/* ---- Secoes tematicas dentro de um card (ex.: blocos de dados publicos) --- */
+.rsr-secao + .rsr-secao { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+.rsr-secao-titulo {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rsr-secao-titulo .rsr-secao-numero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ---- Grid de estatisticas: cartoes individuais, nunca texto solto ---- */
+.rsr-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.rsr-stat {
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 0;
+}
+
+.rsr-stat-rotulo {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-soft);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rsr-stat-valor {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.rsr-stat-fonte {
+  font-size: 11px;
+  color: var(--text-soft);
+  margin-top: 6px;
+}
+
 /* Mobile-first: menu lateral vira overlay, nunca empurra o conteudo. */
 @media (max-width: 860px) {
   .rsr-sidebar {
@@ -252,4 +354,12 @@ a { color: var(--accent); }
     z-index: 20;
   }
   .rsr-scrim.visivel { display: block; }
+
+  .rsr-stats-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .rsr-stat { padding: 12px; }
+  .rsr-stat-valor { font-size: 19px; }
+  .rsr-entidade-header h1 { font-size: 19px; }
+  .rsr-brasao { width: 40px; height: 40px; }
+  .rsr-conteudo { padding: 16px; }
+  .rsr-card { padding: 16px; }
 }

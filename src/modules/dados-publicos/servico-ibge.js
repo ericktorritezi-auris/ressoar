@@ -41,6 +41,18 @@ async function buscarJson(url) {
   return resposta.json();
 }
 
+// Normaliza texto vindo do IBGE (forma NFC) antes de gravar/exibir. Isso
+// resolve o caso comum de um mesmo caractere acentuado chegar representado
+// de forma "decomposta" (letra + acento como codepoints separados) em vez
+// de "precomposta" — que alguns navegadores/fontes exibem errado (ex.: o
+// "¿" no lugar do travessao em nomes de regiao imediata). Nao mascara um
+// caractere que a IBGE realmente enviou diferente; so garante que o MESMO
+// caractere seja sempre representado da mesma forma.
+function normalizarTexto(valor) {
+  if (!valor) return valor;
+  return valor.normalize('NFC').trim();
+}
+
 /**
  * Busca a localidade completa (nome, UF, mesorregiao, microrregiao, regiao
  * geografica e regiao geografica imediata) numa unica chamada — a API de
@@ -51,14 +63,15 @@ async function buscarLocalidadeCompleta(codigoIbge) {
     const dado = await buscarJson(`${BASE_LOCALIDADES}/${codigoIbge}`);
     const uf = dado?.microrregiao?.mesorregiao?.UF?.sigla || dado?.UF?.sigla || null;
     return {
-      nome: dado?.nome || null,
+      nome: normalizarTexto(dado?.nome) || null,
       uf,
-      mesorregiao: dado?.microrregiao?.mesorregiao?.nome || null,
-      microrregiao: dado?.microrregiao?.nome || null,
-      regiao: dado?.microrregiao?.mesorregiao?.UF?.regiao?.nome
-        || dado?.['regiao-imediata']?.['regiao-intermediaria']?.UF?.regiao?.nome
-        || null,
-      regiaoImediata: dado?.['regiao-imediata']?.nome || null,
+      mesorregiao: normalizarTexto(dado?.microrregiao?.mesorregiao?.nome) || null,
+      microrregiao: normalizarTexto(dado?.microrregiao?.nome) || null,
+      regiao: normalizarTexto(
+        dado?.microrregiao?.mesorregiao?.UF?.regiao?.nome
+          || dado?.['regiao-imediata']?.['regiao-intermediaria']?.UF?.regiao?.nome
+      ) || null,
+      regiaoImediata: normalizarTexto(dado?.['regiao-imediata']?.nome) || null,
     };
   } catch (erro) {
     console.warn('[ibge] falha ao buscar localidade', codigoIbge, erro.message);
