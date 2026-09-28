@@ -219,6 +219,24 @@ router.post('/municipios/:id/atualizar-dados-ibge', exigirMaster, async (req, re
   res.redirect(`/municipios/${req.params.id}`);
 });
 
+// Exclui um dado público importado errado (pedido em 2026-09-28: subir
+// arquivo errado na Central de Atualizações precisa de um jeito de
+// remover, não só sobrescrever com um novo upload). Some com o card
+// inteiro daquela chave/fonte na tela de detalhe.
+router.post('/municipios/:id/dados-publicos/excluir', exigirMaster, async (req, res) => {
+  const municipio = await repo.buscarPorId(req.tenant, req.params.id);
+  if (!municipio || !municipio.codigo_ibge) return res.status(404).send('Município não encontrado.');
+
+  const { chave, fonte_codigo: fonteCodigo } = req.body;
+  if (!chave || !fonteCodigo) return res.status(400).send('Dados incompletos para excluir.');
+
+  const fonte = await dadosPublicosRepo.buscarFontePorCodigo(fonteCodigo);
+  if (!fonte) return res.status(404).send('Fonte não encontrada.');
+
+  await dadosPublicosRepo.excluirValor(municipio.codigo_ibge, fonte.id, chave);
+  res.redirect(`/municipios/${req.params.id}`);
+});
+
 // Congela a linha de base do município a partir dos dados públicos e dos
 // indicadores atuais — feito uma vez, na assinatura do contrato (secao 4).
 router.post('/municipios/:id/congelar-linha-base', exigirMaster, async (req, res) => {

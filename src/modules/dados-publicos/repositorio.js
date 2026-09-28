@@ -84,10 +84,24 @@ async function salvarValores(codigoIbge, fonteId, valores) {
   }
 }
 
+// Apaga TODO o historico de uma chave, pra uma fonte especifica, de um
+// municipio — pedido pelo usuario em 2026-09-28: um arquivo importado
+// errado na Central de Atualizações precisa poder ser removido, não só
+// sobrescrito por um novo upload. Some com o "card" inteiro (não só o
+// valor mais recente), porque manter periodos antigos escondidos de um
+// dado que o usuário pediu pra tirar da tela seria enganoso.
+async function excluirValor(codigoIbge, fonteId, chave) {
+  await pool.query(
+    'DELETE FROM dados_publicos WHERE codigo_ibge = $1 AND fonte_id = $2 AND chave = $3',
+    [codigoIbge, fonteId, chave]
+  );
+}
+
 module.exports = {
   listarFontes,
   buscarFontePorCodigo,
   buscarValoresPorCodigoIbge,
   buscarUltimaColetaPorFonte,
   salvarValores,
+  excluirValor,
 };

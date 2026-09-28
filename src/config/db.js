@@ -8,8 +8,13 @@
 const { Pool } = require('pg');
 const env = require('./env');
 
+// APP_DATABASE_URL (nao DATABASE_URL): o trafego real da aplicacao precisa
+// de um role SEM privilegio de superusuario pra Row-Level Security ter
+// efeito de verdade (Bug #7 — ver comentario em src/config/env.js e o
+// alerta de src/db/migrate.js). DATABASE_URL continua reservado pra
+// migrate.js/seed.js, que precisam de privilegio de dono pra rodar DDL.
 const pool = new Pool({
-  connectionString: env.DATABASE_URL,
+  connectionString: env.APP_DATABASE_URL,
   // Em desenvolvimento local (fora do Railway) o Postgres pode nao ter SSL;
   // em producao o Railway exige.
   ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
