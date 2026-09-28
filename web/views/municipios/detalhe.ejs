@@ -1,12 +1,40 @@
 <%
+const ROTULOS = {
+  mesorregiao: 'Mesorregião',
+  microrregiao: 'Microrregião',
+  regiao: 'Região geográfica',
+  regiao_imediata: 'Região geográfica imediata',
+  area_km2: 'Área territorial (km²)',
+  populacao: 'População (estimativa)',
+  populacao_censo_2022: 'População (Censo 2022)',
+  densidade_hab_km2: 'Densidade (hab/km²)',
+  pib_mil_reais: 'PIB (mil reais)',
+  pib_per_capita: 'PIB per capita (R$)',
+  taxa_alfabetizacao: 'Taxa de alfabetização (%)',
+};
 function rotuloChave(chave) {
-  const nomes = { populacao: 'População', area_km2: 'Área (km²)', densidade_hab_km2: 'Densidade (hab/km²)' };
-  return nomes[chave] || chave;
+  return ROTULOS[chave] || chave;
 }
 function formatarValor(v) {
   if (v.valor_numerico !== null && v.valor_numerico !== undefined) return Number(v.valor_numerico).toLocaleString('pt-BR');
   return v.valor_texto || '—';
 }
+// Blocos tematicos pedidos pelo usuario — só entram aqui as chaves que o
+// IBGE realmente publica pronto (ver conversa/entrega para o que ficou de
+// fora e por quê: piramide etaria/sexo/cor-raça/religião, salário médio,
+// taxa de ocupação, estatísticas de empresas, IDEB, mortalidade infantil,
+// infraestrutura hospitalar, saneamento, limites geográficos/malhas).
+const BLOCOS = [
+  { titulo: '1. Território e geografia', chaves: ['mesorregiao', 'microrregiao', 'regiao', 'regiao_imediata', 'area_km2'] },
+  { titulo: '2. Demografia', chaves: ['populacao', 'populacao_censo_2022', 'densidade_hab_km2'] },
+  { titulo: '3. Economia e trabalho', chaves: ['pib_mil_reais', 'pib_per_capita'] },
+  { titulo: '4. Educação', chaves: ['taxa_alfabetizacao'] },
+];
+const dadosPorChave = {};
+dadosPublicos.forEach((v) => { dadosPorChave[v.chave] = v; });
+const blocosComDados = BLOCOS
+  .map((b) => ({ ...b, itens: b.chaves.map((c) => dadosPorChave[c]).filter(Boolean) }))
+  .filter((b) => b.itens.length > 0);
 const eixosComIndicadores = eixos.map((e) => ({
   ...e,
   itens: indicadores.filter((i) => i.eixo_codigo === e.codigo),
@@ -39,15 +67,20 @@ const eixosComIndicadores = eixos.map((e) => ({
   <% } else if (dadosPublicos.length === 0) { %>
     <p style="font-size:13px;color:var(--text-soft);margin-top:14px">Nenhum dado público coletado ainda. Use "Buscar agora" ou aguarde a próxima coleta em lote.</p>
   <% } else { %>
-    <div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:16px">
-      <% dadosPublicos.forEach((v) => { %>
-        <div>
-          <div style="font-size:12px;color:var(--text-soft)"><%= rotuloChave(v.chave) %></div>
-          <div style="font-size:22px;font-weight:700"><%= formatarValor(v) %></div>
-          <div style="font-size:11px;color:var(--text-soft)"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
+    <% blocosComDados.forEach((bloco) => { %>
+      <div style="margin-top:18px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px"><%= bloco.titulo %></div>
+        <div style="display:flex;gap:22px;flex-wrap:wrap">
+          <% bloco.itens.forEach((v) => { %>
+            <div>
+              <div style="font-size:12px;color:var(--text-soft)"><%= rotuloChave(v.chave) %></div>
+              <div style="font-size:22px;font-weight:700"><%= formatarValor(v) %></div>
+              <div style="font-size:11px;color:var(--text-soft)"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
+            </div>
+          <% }) %>
         </div>
-      <% }) %>
-    </div>
+      </div>
+    <% }) %>
   <% } %>
 
   <% if (snapshot.length > 0) { %>
