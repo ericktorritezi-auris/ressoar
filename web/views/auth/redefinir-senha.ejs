@@ -1,0 +1,19 @@
+<%- include('../partials/cabecalho-publico', { titulo: 'Redefinir senha' }) %>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+  <div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:20px">
+    <h1 style="margin:0;font-family:var(--font-display);font-weight:800;font-size:22px">Crie uma nova senha</h1>
+
+    <% if (erro) { %>
+      <div class="rsr-erro"><%= erro %></div>
+    <% } %>
+
+    <form method="POST" action="/redefinir-senha/<%= token %>" style="display:flex;flex-direction:column;gap:16px">
+      <div>
+        <label class="rsr-label" for="senha">Nova senha</label>
+        <input class="rsr-input" type="password" id="senha" name="senha" minlength="8" required autofocus>
+      </div>
+      <button class="rsr-btn rsr-btn-primario" type="submit">Salvar nova senha</button>
+    </form>
+  </div>
+</div>
+<%- include('../partials/rodape-publico') %>

@@ -1,0 +1,24 @@
+<%- include('../partials/cabecalho-publico', { titulo: 'Verificação em duas etapas' }) %>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+  <div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:20px">
+    <h1 style="margin:0;font-family:var(--font-display);font-weight:800;font-size:22px">Verificação em duas etapas</h1>
+    <p style="margin:0;font-size:14px;color:var(--text-soft)">Enviamos um código de 6 dígitos para o seu e-mail. Ele vale por alguns minutos.</p>
+
+    <% if (erro) { %>
+      <div class="rsr-erro"><%= erro %></div>
+    <% } %>
+
+    <form method="POST" action="/login/2fa" style="display:flex;flex-direction:column;gap:16px">
+      <div>
+        <label class="rsr-label" for="codigo">Código</label>
+        <input class="rsr-input" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" id="codigo" name="codigo" required autofocus>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-soft)">
+        <input type="checkbox" name="lembrarDispositivo" value="1" checked>
+        Confiar neste dispositivo pelos próximos 30 dias
+      </label>
+      <button class="rsr-btn rsr-btn-primario" type="submit">Confirmar</button>
+    </form>
+  </div>
+</div>
+<%- include('../partials/rodape-publico') %>

@@ -1,0 +1,21 @@
+<%- include('../partials/cabecalho-publico', { titulo: 'Esqueci minha senha' }) %>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+  <div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:20px">
+    <h1 style="margin:0;font-family:var(--font-display);font-weight:800;font-size:22px">Esqueci minha senha</h1>
+
+    <% if (enviado) { %>
+      <p style="font-size:14px;color:var(--text-soft)">Se o e-mail informado estiver cadastrado, você vai receber um link para redefinir a senha.</p>
+      <a href="/login" style="font-size:13px">Voltar para o login</a>
+    <% } else { %>
+      <form method="POST" action="/esqueci-senha" style="display:flex;flex-direction:column;gap:16px">
+        <div>
+          <label class="rsr-label" for="email">E-mail cadastrado</label>
+          <input class="rsr-input" type="email" id="email" name="email" required autofocus>
+        </div>
+        <button class="rsr-btn rsr-btn-primario" type="submit">Enviar link de redefinição</button>
+      </form>
+      <a href="/login" style="font-size:13px;color:var(--text-soft)">Voltar para o login</a>
+    <% } %>
+  </div>
+</div>
+<%- include('../partials/rodape-publico') %>
