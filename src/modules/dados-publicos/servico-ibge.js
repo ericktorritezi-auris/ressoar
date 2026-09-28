@@ -41,16 +41,23 @@ async function buscarJson(url) {
   return resposta.json();
 }
 
-// Normaliza texto vindo do IBGE (forma NFC) antes de gravar/exibir. Isso
-// resolve o caso comum de um mesmo caractere acentuado chegar representado
-// de forma "decomposta" (letra + acento como codepoints separados) em vez
-// de "precomposta" — que alguns navegadores/fontes exibem errado (ex.: o
-// "¿" no lugar do travessao em nomes de regiao imediata). Nao mascara um
-// caractere que a IBGE realmente enviou diferente; so garante que o MESMO
-// caractere seja sempre representado da mesma forma.
+// Normaliza texto vindo do IBGE antes de gravar/exibir.
+//
+// CONFIRMADO em 2026-09-28 (JSON cru da propria API do IBGE, inspecionado
+// pelo usuario no navegador): a resposta oficial de
+// /localidades/municipios/{codigo} ja vem com "¿" no lugar do separador
+// entre cidades em "regiao-imediata.nome" (ex.: "Cornélio Procópio ¿
+// Bandeirantes" em vez de "Cornélio Procópio - Bandeirantes"). Isto NAO e
+// bug nosso nem do Postgres/EJS — e um defeito de codificacao no lado do
+// IBGE (bytes de travessao mal gravados no banco deles). Como nao ha
+// conserto possivel na fonte, tratamos aqui, na borda de entrada, sempre
+// que esse caractere aparecer isolado entre espacos.
 function normalizarTexto(valor) {
   if (!valor) return valor;
-  return valor.normalize('NFC').trim();
+  return valor
+    .normalize('NFC')
+    .replace(/\s¿\s/g, ' - ') // defeito conhecido da API do IBGE, ver acima
+    .trim();
 }
 
 /**
