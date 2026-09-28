@@ -1,0 +1,68 @@
+<%
+function rotuloStatus(s) {
+  if (s === 'aprovado') return 'Aprovado';
+  if (s === 'rejeitado') return 'Rejeitado';
+  return 'Aguardando aprovação';
+}
+function corStatus(s) {
+  if (s === 'aprovado') return '#1a7f37';
+  if (s === 'rejeitado') return '#c0392b';
+  return '#b8860b';
+}
+const linhas = submissao.dados;
+%>
+<%- include('../partials/shell-inicio', { titulo: 'Planilha v' + submissao.versao + ' · ' + municipio.nome, paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1><%= submissao.origem %> — versão <%= submissao.versao %></h1>
+  <a href="/municipios/<%= municipio.id %>/planilhas" style="font-size:13px">← Voltar</a>
+</div>
+
+<div class="rsr-card" style="margin-bottom:18px">
+  <div style="display:flex;flex-wrap:wrap;gap:24px;font-size:13px">
+    <div><strong>Status:</strong> <span style="color:<%= corStatus(submissao.status) %>;font-weight:600"><%= rotuloStatus(submissao.status) %></span></div>
+    <div><strong>Enviado por:</strong> <%= submissao.enviado_por_nome %> em <%= new Date(submissao.enviado_em).toLocaleString('pt-BR') %></div>
+    <% if (submissao.revisado_em) { %>
+      <div><strong>Revisado por:</strong> <%= submissao.revisado_por_nome %> em <%= new Date(submissao.revisado_em).toLocaleString('pt-BR') %></div>
+    <% } %>
+  </div>
+  <% if (submissao.status === 'rejeitado' && submissao.motivo_rejeicao) { %>
+    <div class="rsr-erro" style="margin-top:14px">Motivo da rejeição: <%= submissao.motivo_rejeicao %></div>
+  <% } %>
+
+  <% if (podeRevisar && submissao.status === 'rascunho_pendente') { %>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <form method="POST" action="/municipios/<%= municipio.id %>/planilhas/<%= submissao.id %>/aprovar">
+        <button class="rsr-btn rsr-btn-primario" type="submit" style="padding:0 20px;width:auto">Aprovar</button>
+      </form>
+      <form method="POST" action="/municipios/<%= municipio.id %>/planilhas/<%= submissao.id %>/rejeitar" style="display:flex;gap:8px;align-items:center" onsubmit="return this.motivo.value.trim().length > 0 || confirm('Rejeitar sem motivo?')">
+        <input class="rsr-input" type="text" name="motivo" placeholder="Motivo da rejeição (opcional)" style="height:34px">
+        <button class="rsr-btn rsr-btn-secundario" type="submit" style="padding:0 20px;width:auto">Rejeitar</button>
+      </form>
+    </div>
+  <% } %>
+</div>
+
+<div class="rsr-card">
+  <div class="rsr-table-wrap">
+    <table class="rsr-table">
+      <thead><tr><th>Indicador</th><th>Valor</th><th>Período</th><th>Situação</th></tr></thead>
+      <tbody>
+        <% linhas.forEach((l) => { %>
+          <tr>
+            <td data-rotulo="Indicador"><%= l.indicadorTexto %></td>
+            <td data-rotulo="Valor"><%= l.valorNumerico !== null ? l.valorNumerico : (l.valorTexto || '—') %></td>
+            <td data-rotulo="Período"><%= l.periodoReferencia || '—' %></td>
+            <td data-rotulo="Situação">
+              <% if (l.indicadorId) { %>
+                <span style="color:#1a7f37">Indicador reconhecido</span>
+              <% } else { %>
+                <span style="color:#b8860b">Sem indicador correspondente</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('../partials/shell-fim', { versao: versao }) %>

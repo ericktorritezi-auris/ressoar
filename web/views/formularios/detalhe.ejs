@@ -1,0 +1,70 @@
+<%
+function rotuloStatusResposta(s) {
+  if (s === 'aprovado') return 'Aprovado';
+  if (s === 'rejeitado') return 'Rejeitado';
+  return 'Aguardando aprovação';
+}
+function corStatusResposta(s) {
+  if (s === 'aprovado') return '#1a7f37';
+  if (s === 'rejeitado') return '#c0392b';
+  return '#b8860b';
+}
+%>
+<%- include('../partials/shell-inicio', { titulo: formulario.nome + ' · ' + municipio.nome, paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1><%= formulario.nome %></h1>
+  <a href="/municipios/<%= municipio.id %>/formularios" style="font-size:13px">← Voltar</a>
+</div>
+
+<div class="rsr-card" style="margin-bottom:18px">
+  <div style="display:flex;flex-wrap:wrap;gap:24px;font-size:13px">
+    <div><strong>Destinatário:</strong> <%= formulario.destinatario_nome %></div>
+    <div><strong>Status atual:</strong> <%= formulario.status === 'respondido' ? 'Respondido' : 'Aguardando resposta' %></div>
+    <div><strong>Criado em:</strong> <%= new Date(formulario.criado_em).toLocaleString('pt-BR') %></div>
+  </div>
+  <% if (formulario.descricao) { %>
+    <p style="font-size:13px;color:var(--text-soft);margin:14px 0 0"><%= formulario.descricao %></p>
+  <% } %>
+</div>
+
+<% if (respostas.length === 0) { %>
+  <div class="rsr-card rsr-vazio">Ainda sem resposta do destinatário.</div>
+<% } else { %>
+  <% respostas.forEach((r) => { %>
+    <div class="rsr-card" style="margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+        <div style="font-weight:700">Resposta v<%= r.versao %></div>
+        <span style="color:<%= corStatusResposta(r.status) %>;font-weight:600"><%= rotuloStatusResposta(r.status) %></span>
+      </div>
+      <div style="font-size:13px;color:var(--text-soft);margin-bottom:12px">
+        Enviada por <%= r.enviado_por_nome %> em <%= new Date(r.enviado_em).toLocaleString('pt-BR') %>
+        <% if (r.revisado_em) { %> · revisada por <%= r.revisado_por_nome %> em <%= new Date(r.revisado_em).toLocaleString('pt-BR') %><% } %>
+      </div>
+      <% if (r.status === 'rejeitado' && r.motivo_rejeicao) { %>
+        <div class="rsr-erro" style="margin-bottom:14px">Motivo da rejeição: <%= r.motivo_rejeicao %></div>
+      <% } %>
+      <div class="rsr-table-wrap">
+        <table class="rsr-table">
+          <thead><tr><th>Campo</th><th>Resposta</th></tr></thead>
+          <tbody>
+            <% r.dados.forEach((d) => { %>
+              <tr><td data-rotulo="Campo"><%= d.rotulo %></td><td data-rotulo="Resposta"><%= d.valor || '—' %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% if (r.status === 'rascunho_pendente') { %>
+        <div style="display:flex;gap:10px;margin-top:18px">
+          <form method="POST" action="/municipios/<%= municipio.id %>/formularios/<%= formulario.id %>/aprovar">
+            <button class="rsr-btn rsr-btn-primario" type="submit" style="padding:0 20px;width:auto">Aprovar</button>
+          </form>
+          <form method="POST" action="/municipios/<%= municipio.id %>/formularios/<%= formulario.id %>/rejeitar" style="display:flex;gap:8px;align-items:center">
+            <input class="rsr-input" type="text" name="motivo" placeholder="Motivo da rejeição (opcional)" style="height:34px">
+            <button class="rsr-btn rsr-btn-secundario" type="submit" style="padding:0 20px;width:auto">Rejeitar</button>
+          </form>
+        </div>
+      <% } %>
+    </div>
+  <% }) %>
+<% } %>
+<%- include('../partials/shell-fim', { versao: versao }) %>

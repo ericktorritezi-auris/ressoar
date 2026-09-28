@@ -63,4 +63,30 @@ function exigirMaster(req, res, next) {
   next();
 }
 
-module.exports = { tenantMiddleware, exigirAutenticacao, exigirMaster, PERFIS_MASTER };
+// Fase 3 (secao 5 do mapeamento): quem envia planilha/responde formulario
+// nao precisa ser master/gestor_carteira — e o proprio "Responsavel pelos
+// dados" (ou outro perfil municipal habilitado) do municipio. A aprovacao
+// continua exclusiva de master/gestor_carteira (exigirMaster, nas rotas de
+// aprovar/rejeitar). Aqui so garante autenticacao; o isolamento de QUAL
+// municipio cada perfil enxerga e decidido pelo RLS via req.tenant.
+const PERFIS_ENVIO_DADOS = new Set([
+  'master', 'gestor_carteira', 'responsavel_dados', 'prefeito_secretario',
+]);
+
+function exigirPerfilDeEnvioDeDados(req, res, next) {
+  if (!req.tenant || !req.tenant.autenticado) {
+    return res.redirect('/login');
+  }
+  if (!PERFIS_ENVIO_DADOS.has(req.tenant.usuario.perfil)) {
+    return res.status(403).send('Seu perfil não tem permissão para enviar dados.');
+  }
+  next();
+}
+
+module.exports = {
+  tenantMiddleware,
+  exigirAutenticacao,
+  exigirMaster,
+  exigirPerfilDeEnvioDeDados,
+  PERFIS_MASTER,
+};

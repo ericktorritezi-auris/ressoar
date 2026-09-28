@@ -1,0 +1,54 @@
+<%
+function rotuloStatus(s) {
+  if (s === 'aprovado') return 'Aprovado';
+  if (s === 'rejeitado') return 'Rejeitado';
+  return 'Aguardando aprovação';
+}
+function corStatus(s) {
+  if (s === 'aprovado') return '#1a7f37';
+  if (s === 'rejeitado') return '#c0392b';
+  return '#b8860b';
+}
+%>
+<%- include('../partials/shell-inicio', { titulo: 'Planilhas · ' + municipio.nome, paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <div>
+    <h1>Planilhas — <%= municipio.nome %></h1>
+    <a href="/municipios/<%= municipio.id %>" style="font-size:13px">← Voltar ao município</a>
+  </div>
+  <div style="display:flex;gap:10px">
+    <a class="rsr-btn rsr-btn-secundario" style="display:inline-flex;align-items:center;text-decoration:none" href="/municipios/<%= municipio.id %>/planilhas/modelo">Baixar modelo</a>
+    <a class="rsr-btn rsr-btn-primario" style="padding:0 18px;display:inline-flex;align-items:center;text-decoration:none" href="/municipios/<%= municipio.id %>/planilhas/nova">Importar planilha</a>
+  </div>
+</div>
+
+<p style="font-size:13px;color:var(--text-soft);margin:-6px 0 18px">
+  Baixe o modelo (uma linha por indicador ativo do catálogo), preencha "valor" e "período" e suba de volta.
+  Toda importação entra como pendente até o master ou o gestor de carteira aprovar — reenvios criam uma nova
+  versão, sem apagar a anterior.
+</p>
+
+<% if (submissoes.length === 0) { %>
+  <div class="rsr-card rsr-vazio">Nenhuma planilha importada ainda.</div>
+<% } else { %>
+  <div class="rsr-card">
+    <div class="rsr-table-wrap">
+      <table class="rsr-table">
+        <thead><tr><th>Versão</th><th>Arquivo</th><th>Enviado por</th><th>Enviado em</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <% submissoes.forEach((s) => { %>
+            <tr>
+              <td data-rotulo="Versão">v<%= s.versao %></td>
+              <td data-rotulo="Arquivo"><%= s.origem %></td>
+              <td data-rotulo="Enviado por"><%= s.enviado_por_nome %></td>
+              <td data-rotulo="Enviado em"><%= new Date(s.enviado_em).toLocaleString('pt-BR') %></td>
+              <td data-rotulo="Status"><span style="color:<%= corStatus(s.status) %>;font-weight:600"><%= rotuloStatus(s.status) %></span></td>
+              <td data-rotulo=""><a href="/municipios/<%= municipio.id %>/planilhas/<%= s.id %>" style="font-size:13px">Ver</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% } %>
+<%- include('../partials/shell-fim', { versao: versao }) %>
