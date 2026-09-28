@@ -22,15 +22,15 @@
       <tbody>
         <% municipios.forEach((m) => { %>
           <tr>
-            <td>
+            <td data-rotulo="Município">
               <a href="/municipios/<%= m.id %>" style="font-weight:600;text-decoration:none;color:var(--text)"><%= m.nome %></a>
               <% if (m.eh_municipio_teste) { %> <span class="rsr-badge rsr-badge-neutro">Teste</span><% } %>
             </td>
-            <td><%= m.uf %></td>
-            <td><%= m.codigo_ibge || '—' %></td>
-            <td><%= m.populacao ? Number(m.populacao).toLocaleString('pt-BR') : '—' %></td>
-            <td><%= m.contrato_vigencia || '—' %></td>
-            <td><a href="/municipios/<%= m.id %>/editar" style="font-size:13px">Editar</a></td>
+            <td data-rotulo="UF"><%= m.uf %></td>
+            <td data-rotulo="Código IBGE"><%= m.codigo_ibge || '—' %></td>
+            <td data-rotulo="População"><%= m.populacao ? Number(m.populacao).toLocaleString('pt-BR') : '—' %></td>
+            <td data-rotulo="Vigência do contrato"><%= m.contrato_vigencia || '—' %></td>
+            <td data-rotulo=""><a href="/municipios/<%= m.id %>/editar" style="font-size:13px">Editar</a></td>
           </tr>
         <% }) %>
       </tbody>

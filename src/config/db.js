@@ -26,11 +26,13 @@ pool.on('error', (erro) => {
  * setado para as policies de Row-Level Security.
  *
  * @param {object} contexto
- * @param {string|null} contexto.municipioId - uuid do municipio, ou null para master
- * @param {boolean} contexto.isMaster - true para master/administrador de carteira
+ * @param {string|null} contexto.municipioId - uuid do municipio, ou null para master/gestor_carteira
+ * @param {boolean} contexto.isMaster - true SOMENTE para o perfil master (visibilidade total nas policies de RLS)
+ * @param {string|null} contexto.usuarioId - uuid do usuario logado; usado pelas policies para escopar
+ *   o gestor_carteira aos municipios em que ele e o gestor_carteira_id (secao 2 do mapeamento, Bug #7)
  * @param {(client: import('pg').PoolClient) => Promise<any>} fn
  */
-async function withTenantContext({ municipioId = null, isMaster = false }, fn) {
+async function withTenantContext({ municipioId = null, isMaster = false, usuarioId = null }, fn) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -43,6 +45,10 @@ async function withTenantContext({ municipioId = null, isMaster = false }, fn) {
     await client.query('SELECT set_config($1, $2, true)', [
       'app.is_master',
       isMaster ? 'true' : 'false',
+    ]);
+    await client.query('SELECT set_config($1, $2, true)', [
+      'app.current_usuario_id',
+      usuarioId || '',
     ]);
     const resultado = await fn(client);
     await client.query('COMMIT');

@@ -45,10 +45,10 @@ function statusDe(municipioId, codigoFonte) {
           <tbody>
             <% fontes.forEach((f) => { const ultima = statusDe(m.id, f.codigo); %>
               <tr>
-                <td><%= f.nome %></td>
-                <td><%= f.dado_trazido %></td>
-                <td><%= ultima ? ultima.toLocaleDateString('pt-BR') : 'Nunca coletado' %></td>
-                <td>
+                <td data-rotulo="Fonte"><%= f.nome %></td>
+                <td data-rotulo="Dado trazido"><%= f.dado_trazido %></td>
+                <td data-rotulo="Última coleta"><%= ultima ? ultima.toLocaleDateString('pt-BR') : 'Nunca coletado' %></td>
+                <td data-rotulo="">
                   <% if (f.integracao === 'api') { %>
                     <form method="POST" action="/central-atualizacoes/<%= m.id %>/ibge">
                       <button class="rsr-btn rsr-btn-secundario" type="submit" style="height:34px;padding:0 12px;font-size:12px">Buscar agora</button>

@@ -23,11 +23,25 @@ const PERFIS = [
   { valor: 'responsavel_dados', rotulo: 'Responsável pelos dados' },
 ];
 
+// Gestor de carteira so cadastra os perfis operacionais do proprio
+// municipio (secao 2 do mapeamento) — master e outros gestores de carteira
+// sao cadastro exclusivo do master. Aplicado tanto na tela (perfis
+// oferecidos) quanto no servidor (defesa contra POST forjado).
+const PERFIS_RESTRITOS_A_MASTER = new Set(['master', 'gestor_carteira']);
+
+function perfisPermitidosPara(usuarioLogado) {
+  if (usuarioLogado.perfil === 'master') return PERFIS;
+  return PERFIS.filter((p) => !PERFIS_RESTRITOS_A_MASTER.has(p.valor));
+}
+
 const HORAS_VALIDADE_CONVITE = 72;
 
-router.use(exigirMaster);
-
-router.get('/usuarios', async (req, res) => {
+// exigirMaster aplicado rota a rota (nunca com router.use no topo): um
+// router.use() sem caminho roda para QUALQUER requisicao que entre por
+// este router, mesmo uma que nao bate com nenhuma rota aqui dentro — como
+// este modulo e montado em app.use('/', ...), isso bloqueava /painel e
+// /ajuda para perfis nao-master antes de a requisicao sequer chegar la.
+router.get('/usuarios', exigirMaster, async (req, res) => {
   const usuarios = await repo.listar(req.tenant, req.query.municipio_id || null);
   res.render('usuarios/lista', {
     usuario: req.tenant.usuario,
@@ -36,22 +50,27 @@ router.get('/usuarios', async (req, res) => {
   });
 });
 
-router.get('/usuarios/novo', async (req, res) => {
+router.get('/usuarios/novo', exigirMaster, async (req, res) => {
   const municipios = await municipiosRepo.listar(req.tenant);
   res.render('usuarios/form', {
     usuario: req.tenant.usuario,
     versao: req.app.locals.versao,
-    perfis: PERFIS,
+    perfis: perfisPermitidosPara(req.tenant.usuario),
     municipios,
     registro: null,
     erro: null,
   });
 });
 
-router.post('/usuarios', async (req, res) => {
+router.post('/usuarios', exigirMaster, async (req, res) => {
   const { nome, email, perfil, cpf, matricula, cargo, municipio_id: municipioId } = req.body;
 
   try {
+    const permitidos = perfisPermitidosPara(req.tenant.usuario);
+    if (!permitidos.some((p) => p.valor === perfil)) {
+      throw new Error('Você não tem permissão para cadastrar esse perfil de usuário.');
+    }
+
     const existente = await repo.buscarPorEmail(req.tenant, email);
     if (existente) {
       throw new Error('Já existe um usuário com este e-mail.');
@@ -94,7 +113,7 @@ router.post('/usuarios', async (req, res) => {
     res.status(400).render('usuarios/form', {
       usuario: req.tenant.usuario,
       versao: req.app.locals.versao,
-      perfis: PERFIS,
+      perfis: perfisPermitidosPara(req.tenant.usuario),
       municipios,
       registro: req.body,
       erro: erro.message || 'Não foi possível salvar o usuário.',
@@ -102,22 +121,28 @@ router.post('/usuarios', async (req, res) => {
   }
 });
 
-router.get('/usuarios/:id/editar', async (req, res) => {
+router.get('/usuarios/:id/editar', exigirMaster, async (req, res) => {
   const registro = await repo.buscarPorId(req.tenant, req.params.id);
   if (!registro) return res.status(404).send('Usuário não encontrado.');
   const municipios = await municipiosRepo.listar(req.tenant);
   res.render('usuarios/form', {
     usuario: req.tenant.usuario,
     versao: req.app.locals.versao,
-    perfis: PERFIS,
+    perfis: perfisPermitidosPara(req.tenant.usuario),
     municipios,
     registro,
     erro: null,
   });
 });
 
-router.post('/usuarios/:id', async (req, res) => {
+router.post('/usuarios/:id', exigirMaster, async (req, res) => {
   const { nome, perfil, cpf, matricula, cargo, municipio_id: municipioId, ativo } = req.body;
+
+  const permitidos = perfisPermitidosPara(req.tenant.usuario);
+  if (!permitidos.some((p) => p.valor === perfil)) {
+    return res.status(400).send('Você não tem permissão para atribuir esse perfil de usuário.');
+  }
+
   await repo.atualizar(req.tenant, req.params.id, {
     nome,
     perfil,

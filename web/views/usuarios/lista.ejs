@@ -24,12 +24,12 @@ const rotulos = {
       <tbody>
         <% usuarios.forEach((u) => { %>
           <tr>
-            <td style="font-weight:600"><%= u.nome %></td>
-            <td><%= u.email %></td>
-            <td><span class="rsr-badge"><%= rotulos[u.perfil] || u.perfil %></span></td>
-            <td><%= u.municipio_nome || '—' %></td>
-            <td><%- u.ativo ? '<span class="rsr-badge rsr-badge-mint">Ativo</span>' : '<span class="rsr-badge rsr-badge-neutro">Inativo</span>' %></td>
-            <td><a href="/usuarios/<%= u.id %>/editar" style="font-size:13px">Editar</a></td>
+            <td data-rotulo="Nome" style="font-weight:600"><%= u.nome %></td>
+            <td data-rotulo="E-mail"><%= u.email %></td>
+            <td data-rotulo="Perfil"><span class="rsr-badge"><%= rotulos[u.perfil] || u.perfil %></span></td>
+            <td data-rotulo="Município"><%= u.municipio_nome || '—' %></td>
+            <td data-rotulo="Status"><%- u.ativo ? '<span class="rsr-badge rsr-badge-mint">Ativo</span>' : '<span class="rsr-badge rsr-badge-neutro">Inativo</span>' %></td>
+            <td data-rotulo=""><a href="/usuarios/<%= u.id %>/editar" style="font-size:13px">Editar</a></td>
           </tr>
         <% }) %>
       </tbody>

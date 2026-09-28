@@ -35,6 +35,20 @@ dadosPublicos.forEach((v) => { dadosPorChave[v.chave] = v; });
 const blocosComDados = BLOCOS
   .map((b) => ({ ...b, itens: b.chaves.map((c) => dadosPorChave[c]).filter(Boolean) }))
   .filter((b) => b.itens.length > 0);
+// Bug #4 (achado na rodada de testes de 2026-09-28): dados importados de
+// fontes que NAO sao IBGE (SIOPS, Siconfi, CNES, DATASUS, via Central de
+// Atualizações) eram salvos corretamente mas nunca apareciam aqui — os
+// BLOCOS acima so cobrem as chaves que o IBGE publica pronto. Qualquer
+// chave que nao esteja em nenhum BLOCOS.chaves cai neste bloco genérico
+// "Outros dados públicos", agrupado por fonte.
+const chavesNosBlocosIbge = new Set(BLOCOS.flatMap((b) => b.chaves));
+const outrosDados = dadosPublicos.filter((v) => !chavesNosBlocosIbge.has(v.chave));
+const outrosDadosPorFonte = {};
+outrosDados.forEach((v) => {
+  const fonte = v.fonte_nome || 'Outra fonte';
+  if (!outrosDadosPorFonte[fonte]) outrosDadosPorFonte[fonte] = [];
+  outrosDadosPorFonte[fonte].push(v);
+});
 const eixosComIndicadores = eixos.map((e) => ({
   ...e,
   itens: indicadores.filter((i) => i.eixo_codigo === e.codigo),
@@ -141,6 +155,20 @@ if (municipio.mandato_fim) {
         </div>
       </div>
     <% }) %>
+    <% Object.keys(outrosDadosPorFonte).forEach((fonte, indice) => { %>
+      <div class="rsr-secao">
+        <div class="rsr-secao-titulo"><span class="rsr-secao-numero"><%= BLOCOS.length + indice + 1 %></span> Outros dados públicos · <%= fonte %></div>
+        <div class="rsr-stats-grid">
+          <% outrosDadosPorFonte[fonte].forEach((v) => { %>
+            <div class="rsr-stat">
+              <div class="rsr-stat-rotulo"><%= rotuloChave(v.chave) %></div>
+              <div class="rsr-stat-valor"><%= formatarValor(v) %></div>
+              <div class="rsr-stat-fonte"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    <% }) %>
   <% } %>
 
   <% if (snapshot.length > 0) { %>
@@ -167,12 +195,12 @@ if (municipio.mandato_fim) {
             <tbody>
               <% eixo.itens.forEach((i) => { %>
                 <tr>
-                  <td><%= i.nome %> <% if (!i.ativo) { %><span class="rsr-badge rsr-badge-neutro">Inativo</span><% } %></td>
-                  <td><%= i.linha_base !== null ? i.linha_base : '—' %> <%= i.unidade || '' %></td>
-                  <td><%= i.meta !== null ? i.meta : '—' %> <%= i.unidade || '' %></td>
-                  <td><%= i.periodicidade %></td>
-                  <td><span class="rsr-badge"><%= i.fonte_dado.replace('_', ' ') %></span></td>
-                  <td><a href="/municipios/<%= municipio.id %>/indicadores/<%= i.id %>/editar" style="font-size:13px">Editar</a></td>
+                  <td data-rotulo="Indicador"><%= i.nome %> <% if (!i.ativo) { %><span class="rsr-badge rsr-badge-neutro">Inativo</span><% } %></td>
+                  <td data-rotulo="Linha de base"><%= i.linha_base !== null ? i.linha_base : '—' %> <%= i.unidade || '' %></td>
+                  <td data-rotulo="Meta"><%= i.meta !== null ? i.meta : '—' %> <%= i.unidade || '' %></td>
+                  <td data-rotulo="Periodicidade"><%= i.periodicidade %></td>
+                  <td data-rotulo="Fonte"><span class="rsr-badge"><%= i.fonte_dado.replace('_', ' ') %></span></td>
+                  <td data-rotulo=""><a href="/municipios/<%= municipio.id %>/indicadores/<%= i.id %>/editar" style="font-size:13px">Editar</a></td>
                 </tr>
               <% }) %>
             </tbody>

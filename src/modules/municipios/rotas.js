@@ -29,8 +29,11 @@ const upload = multer({
   },
 });
 
-router.use(exigirMaster);
-
+// exigirMaster aplicado rota a rota — ver comentario em usuarios/rotas.js
+// (Bug #2): router.use() sem caminho intercepta toda requisicao que entra
+// por este router, mesmo as que nao batem nenhuma rota aqui dentro (nesse
+// caso bloqueava /painel e /ajuda, montados depois deste router em
+// server.js, para qualquer perfil nao-master).
 // Link é sempre a opção preferida (mais simples, não some em redeploy); o
 // upload de arquivo fica como alternativa só quando não há link informado.
 function resolverBrasaoUrl(brasaoUrlInformada, arquivoEnviado) {
@@ -40,7 +43,7 @@ function resolverBrasaoUrl(brasaoUrlInformada, arquivoEnviado) {
   return null;
 }
 
-router.get('/municipios', async (req, res) => {
+router.get('/municipios', exigirMaster, async (req, res) => {
   const municipios = await repo.listar(req.tenant);
   res.render('municipios/lista', {
     usuario: req.tenant.usuario,
@@ -50,7 +53,7 @@ router.get('/municipios', async (req, res) => {
   });
 });
 
-router.get('/municipios/novo', async (req, res) => {
+router.get('/municipios/novo', exigirMaster, async (req, res) => {
   const gestores = await repo.listarGestoresCarteira(req.tenant);
   res.render('municipios/form', {
     usuario: req.tenant.usuario,
@@ -65,7 +68,7 @@ router.get('/municipios/novo', async (req, res) => {
 // codigo IBGE, para preencher nome/UF na hora — sem isso, o preenchimento
 // so acontecia no servidor DEPOIS do clique em Salvar, tarde demais para
 // ajudar quem esta preenchendo o formulario (secao 3.1 do mapeamento).
-router.get('/municipios/buscar-ibge/:codigo', async (req, res) => {
+router.get('/municipios/buscar-ibge/:codigo', exigirMaster, async (req, res) => {
   const codigo = (req.params.codigo || '').trim();
   if (!/^\d{7}$/.test(codigo)) {
     return res.status(400).json({ erro: 'Código IBGE deve ter 7 dígitos.' });
@@ -77,7 +80,7 @@ router.get('/municipios/buscar-ibge/:codigo', async (req, res) => {
   res.json(localidade);
 });
 
-router.post('/municipios', upload.single('brasao_arquivo'), async (req, res) => {
+router.post('/municipios', exigirMaster, upload.single('brasao_arquivo'), async (req, res) => {
   try {
     const { codigo_ibge: codigoIbge, nome, uf, populacao, contrato_inicio: contratoInicio,
       contrato_vigencia: contratoVigencia, gestor_carteira_id: gestorCarteiraId,
@@ -144,7 +147,7 @@ router.post('/municipios', upload.single('brasao_arquivo'), async (req, res) => 
   }
 });
 
-router.get('/municipios/:id', async (req, res) => {
+router.get('/municipios/:id', exigirMaster, async (req, res) => {
   const municipio = await repo.buscarPorId(req.tenant, req.params.id);
   if (!municipio) return res.status(404).send('Município não encontrado.');
 
@@ -166,7 +169,7 @@ router.get('/municipios/:id', async (req, res) => {
   });
 });
 
-router.get('/municipios/:id/editar', async (req, res) => {
+router.get('/municipios/:id/editar', exigirMaster, async (req, res) => {
   const municipio = await repo.buscarPorId(req.tenant, req.params.id);
   if (!municipio) return res.status(404).send('Município não encontrado.');
   const gestores = await repo.listarGestoresCarteira(req.tenant);
@@ -179,7 +182,7 @@ router.get('/municipios/:id/editar', async (req, res) => {
   });
 });
 
-router.post('/municipios/:id', upload.single('brasao_arquivo'), async (req, res) => {
+router.post('/municipios/:id', exigirMaster, upload.single('brasao_arquivo'), async (req, res) => {
   const { nome, uf, populacao, contrato_inicio: contratoInicio,
     contrato_vigencia: contratoVigencia, gestor_carteira_id: gestorCarteiraId,
     brasao_url: brasaoUrlInformada, prefeito_nome: prefeitoNome,
@@ -207,7 +210,7 @@ router.post('/municipios/:id', upload.single('brasao_arquivo'), async (req, res)
 
 // Botão "Buscar agora" da IBGE, chamado tanto no cadastro quanto na
 // Central de Atualizações (secao 4 — "importação de um clique").
-router.post('/municipios/:id/atualizar-dados-ibge', async (req, res) => {
+router.post('/municipios/:id/atualizar-dados-ibge', exigirMaster, async (req, res) => {
   const municipio = await repo.buscarPorId(req.tenant, req.params.id);
   if (!municipio || !municipio.codigo_ibge) {
     return res.status(400).send('Município sem código IBGE cadastrado.');
@@ -218,7 +221,7 @@ router.post('/municipios/:id/atualizar-dados-ibge', async (req, res) => {
 
 // Congela a linha de base do município a partir dos dados públicos e dos
 // indicadores atuais — feito uma vez, na assinatura do contrato (secao 4).
-router.post('/municipios/:id/congelar-linha-base', async (req, res) => {
+router.post('/municipios/:id/congelar-linha-base', exigirMaster, async (req, res) => {
   const municipio = await repo.buscarPorId(req.tenant, req.params.id);
   if (!municipio) return res.status(404).send('Município não encontrado.');
 

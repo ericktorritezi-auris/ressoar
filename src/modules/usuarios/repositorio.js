@@ -3,7 +3,7 @@
 const { withTenantContext } = require('../../config/db');
 
 function contextoDe(tenant) {
-  return { municipioId: tenant.municipioId, isMaster: tenant.isMaster };
+  return { municipioId: tenant.municipioId, isMaster: tenant.isMaster, usuarioId: tenant.usuarioId };
 }
 
 const PERFIS_QUE_EXIGEM_MUNICIPIO = new Set([
