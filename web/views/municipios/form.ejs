@@ -66,6 +66,32 @@ function dataInputValue(v) {
       não é persistente em todo redeploy, até a Fase 2 ligar um armazenamento externo de arquivos (decisão já
       tomada no mapeamento, seção 8). Se os dois forem preenchidos, o link é usado e o arquivo é ignorado.
     </p>
+
+    <div class="rsr-secao" style="margin-top:22px;padding-top:20px;border-top:1px solid var(--border)">
+      <div class="rsr-secao-titulo">Mandato atual</div>
+      <p style="font-size:12px;color:var(--text-soft);margin:-6px 0 14px">
+        Preenchimento manual — não há fonte pública automática confiável para prefeito/partido em exercício.
+      </p>
+      <div class="rsr-form-grid">
+        <div>
+          <label class="rsr-label">Nome do prefeito</label>
+          <input class="rsr-input" type="text" name="prefeito_nome" value="<%= municipio ? municipio.prefeito_nome || '' : '' %>">
+        </div>
+        <div>
+          <label class="rsr-label">Partido</label>
+          <input class="rsr-input" type="text" name="prefeito_partido" placeholder="Ex.: PSDB" value="<%= municipio ? municipio.prefeito_partido || '' : '' %>">
+        </div>
+        <div>
+          <label class="rsr-label">Início do mandato</label>
+          <input class="rsr-input" type="date" name="mandato_inicio" value="<%= municipio ? dataInputValue(municipio.mandato_inicio) : '' %>">
+        </div>
+        <div>
+          <label class="rsr-label">Fim do mandato</label>
+          <input class="rsr-input" type="date" name="mandato_fim" value="<%= municipio ? dataInputValue(municipio.mandato_fim) : '' %>">
+        </div>
+      </div>
+    </div>
+
     <div style="margin-top:22px">
       <button class="rsr-btn rsr-btn-primario" type="submit" style="padding:0 24px;width:auto">Salvar</button>
     </div>

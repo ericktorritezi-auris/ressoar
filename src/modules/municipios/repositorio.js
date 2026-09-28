@@ -13,6 +13,7 @@ async function listar(tenant) {
     const { rows } = await client.query(
       `SELECT id, codigo_ibge, nome, uf, populacao, brasao_url,
               contrato_inicio, contrato_vigencia, gestor_carteira_id,
+              prefeito_nome, prefeito_partido, mandato_inicio, mandato_fim,
               eh_municipio_teste, criado_em
          FROM municipios
         ORDER BY nome`
@@ -26,6 +27,7 @@ async function buscarPorId(tenant, id) {
     const { rows } = await client.query(
       `SELECT id, codigo_ibge, nome, uf, populacao, brasao_url,
               contrato_inicio, contrato_vigencia, gestor_carteira_id,
+              prefeito_nome, prefeito_partido, mandato_inicio, mandato_fim,
               eh_municipio_teste, criado_em
          FROM municipios
         WHERE id = $1`,
@@ -40,8 +42,9 @@ async function criar(tenant, dados) {
     const { rows } = await client.query(
       `INSERT INTO municipios
          (codigo_ibge, nome, uf, populacao, brasao_url, contrato_inicio,
-          contrato_vigencia, gestor_carteira_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          contrato_vigencia, gestor_carteira_id, prefeito_nome,
+          prefeito_partido, mandato_inicio, mandato_fim)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING id`,
       [
         dados.codigoIbge || null,
@@ -52,6 +55,10 @@ async function criar(tenant, dados) {
         dados.contratoInicio || null,
         dados.contratoVigencia || null,
         dados.gestorCarteiraId || null,
+        dados.prefeitoNome || null,
+        dados.prefeitoPartido || null,
+        dados.mandatoInicio || null,
+        dados.mandatoFim || null,
       ]
     );
     return rows[0].id;
@@ -63,8 +70,10 @@ async function atualizar(tenant, id, dados) {
     client.query(
       `UPDATE municipios
           SET nome = $1, uf = $2, populacao = $3, brasao_url = $4,
-              contrato_inicio = $5, contrato_vigencia = $6, gestor_carteira_id = $7
-        WHERE id = $8`,
+              contrato_inicio = $5, contrato_vigencia = $6, gestor_carteira_id = $7,
+              prefeito_nome = $8, prefeito_partido = $9, mandato_inicio = $10,
+              mandato_fim = $11
+        WHERE id = $12`,
       [
         dados.nome,
         dados.uf,
@@ -73,6 +82,10 @@ async function atualizar(tenant, id, dados) {
         dados.contratoInicio || null,
         dados.contratoVigencia || null,
         dados.gestorCarteiraId || null,
+        dados.prefeitoNome || null,
+        dados.prefeitoPartido || null,
+        dados.mandatoInicio || null,
+        dados.mandatoFim || null,
         id,
       ]
     )

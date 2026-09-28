@@ -39,6 +39,21 @@ const eixosComIndicadores = eixos.map((e) => ({
   ...e,
   itens: indicadores.filter((i) => i.eixo_codigo === e.codigo),
 }));
+function formatarData(v) {
+  if (!v) return null;
+  const d = v instanceof Date ? v : new Date(v);
+  return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+}
+// Dias ate o fim do mandato — só para exibição aqui; o alerta automático
+// pelo sino (360/180/90/60/30/15 dias, para master + gestor de carteira)
+// fica para quando a central de notificações for construída (combinado
+// em 2026-09-28) — nenhuma rotina roda a partir disto ainda.
+let diasParaFimMandato = null;
+if (municipio.mandato_fim) {
+  const hoje = new Date();
+  const fim = new Date(municipio.mandato_fim);
+  diasParaFimMandato = Math.ceil((fim.getTime() - Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())) / 86400000);
+}
 %>
 <%- include('../partials/shell-inicio', { titulo: municipio.nome, paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
 <div class="rsr-toolbar">
@@ -56,6 +71,43 @@ const eixosComIndicadores = eixos.map((e) => ({
     <a class="rsr-btn rsr-btn-primario" style="padding:0 18px;display:inline-flex;align-items:center;text-decoration:none" href="/municipios/<%= municipio.id %>/indicadores/novo">+ Indicador</a>
   </div>
 </div>
+
+<% if (municipio.prefeito_nome || municipio.mandato_fim) { %>
+<div class="rsr-card">
+  <h2 style="margin:0 0 14px;font-size:16px;font-family:var(--font-display)">Mandato atual</h2>
+  <div class="rsr-stats-grid">
+    <% if (municipio.prefeito_nome) { %>
+      <div class="rsr-stat">
+        <div class="rsr-stat-rotulo">Prefeito</div>
+        <div class="rsr-stat-valor" style="font-size:18px"><%= municipio.prefeito_nome %></div>
+      </div>
+    <% } %>
+    <% if (municipio.prefeito_partido) { %>
+      <div class="rsr-stat">
+        <div class="rsr-stat-rotulo">Partido</div>
+        <div class="rsr-stat-valor" style="font-size:18px"><%= municipio.prefeito_partido %></div>
+      </div>
+    <% } %>
+    <% if (municipio.mandato_inicio || municipio.mandato_fim) { %>
+      <div class="rsr-stat">
+        <div class="rsr-stat-rotulo">Período do mandato</div>
+        <div class="rsr-stat-valor" style="font-size:18px"><%= formatarData(municipio.mandato_inicio) || '—' %> a <%= formatarData(municipio.mandato_fim) || '—' %></div>
+        <% if (diasParaFimMandato !== null) { %>
+          <div class="rsr-stat-fonte">
+            <% if (diasParaFimMandato < 0) { %>
+              <span class="rsr-badge rsr-badge-neutro">Mandato encerrado</span>
+            <% } else if (diasParaFimMandato <= 30) { %>
+              <span class="rsr-badge rsr-badge-coral">Encerra em <%= diasParaFimMandato %> dia(s)</span>
+            <% } else { %>
+              <span class="rsr-badge">Encerra em <%= diasParaFimMandato %> dia(s)</span>
+            <% } %>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+</div>
+<% } %>
 
 <div class="rsr-card">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
