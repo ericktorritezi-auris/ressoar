@@ -1,0 +1,38 @@
+name: CI
+
+# Roda em todo push e todo PR para a main. Qualquer falha aqui bloqueia o
+# merge (branch protection deve exigir este check) e o Railway deve estar
+# configurado para so fazer deploy quando este workflow terminar verde
+# ("Wait for CI" nas configuracoes do servico no Railway).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  testes:
+    name: Lint + testes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Lint (sintaxe do servidor)
+        run: npm run lint
+
+      - name: Testes automatizados
+        run: npm test
+        env:
+          NODE_ENV: test
+          SESSION_SECRET: segredo-de-teste-ci
