@@ -34,3 +34,22 @@ test('GET /login responde 200 (tela publica)', async () => {
 
   await new Promise((resolve) => servidor.close(resolve));
 });
+
+// As rotas da Fase 2 (municipios, usuarios, indicadores, central de
+// atualizacoes) exigem autenticacao antes de qualquer coisa — nenhuma
+// delas deve responder sem sessao, mesmo sem banco disponivel neste teste.
+test('rotas protegidas da Fase 2 redirecionam para /login sem sessao', async () => {
+  const servidor = http.createServer(app);
+  await new Promise((resolve) => servidor.listen(0, resolve));
+  const { port } = servidor.address();
+
+  const rotas = ['/municipios', '/usuarios', '/central-atualizacoes'];
+  for (const rota of rotas) {
+    // eslint-disable-next-line no-await-in-loop
+    const resposta = await fetch(`http://127.0.0.1:${port}${rota}`, { redirect: 'manual' });
+    assert.equal(resposta.status, 302, `${rota} deveria redirecionar sem sessao`);
+    assert.match(resposta.headers.get('location'), /\/login$/);
+  }
+
+  await new Promise((resolve) => servidor.close(resolve));
+});

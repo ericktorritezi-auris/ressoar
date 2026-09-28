@@ -1,0 +1,71 @@
+<%
+function statusDe(municipioId, codigoFonte) {
+  const linha = (statusPorMunicipio[municipioId] || []).find((s) => s.fonte_codigo === codigoFonte);
+  if (!linha || !linha.ultima_coleta) return null;
+  return new Date(linha.ultima_coleta);
+}
+%>
+<%- include('../partials/shell-inicio', { titulo: 'Central de Atualizações', paginaAtiva: 'central-atualizacoes', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1>Central de Atualizações</h1>
+</div>
+
+<p style="font-size:13px;color:var(--text-soft);margin:-6px 0 18px">
+  O que há de novo em cada fonte de dado público, por município. IBGE é buscado ao vivo com um clique;
+  as demais fontes exigem baixar o arquivo oficial e importar aqui (nenhuma delas traz dado individual/clínico —
+  são sempre números agregados em nível municipal). Formato do arquivo para importar: CSV com colunas
+  <code>chave,valor,periodo</code>, uma linha por dado — ex.: <code>percentual_investido_saude,7.8,2026</code>.
+</p>
+
+<% if (mensagem) { %><div class="rsr-sucesso" style="margin-bottom:16px"><%= mensagem %></div><% } %>
+<% if (erro) { %><div class="rsr-erro" style="margin-bottom:16px"><%= erro %></div><% } %>
+
+<% if (semCodigo > 0) { %>
+  <p style="font-size:12px;color:var(--text-soft);margin-bottom:16px">
+    <%= semCodigo %> município(s) sem código IBGE cadastrado não aparecem aqui — complete o cadastro para habilitar a coleta.
+  </p>
+<% } %>
+
+<% if (municipios.length === 0) { %>
+  <div class="rsr-card rsr-vazio">Nenhum município com código IBGE cadastrado ainda.</div>
+<% } else { %>
+  <% municipios.forEach((m) => { %>
+    <div class="rsr-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+        <div>
+          <div style="font-weight:700"><%= m.nome %> — <%= m.uf %></div>
+          <div style="font-size:12px;color:var(--text-soft)">Código IBGE <%= m.codigo_ibge %></div>
+        </div>
+      </div>
+      <div class="rsr-table-wrap">
+        <table class="rsr-table">
+          <thead>
+            <tr><th>Fonte</th><th>Dado trazido</th><th>Última coleta</th><th></th></tr>
+          </thead>
+          <tbody>
+            <% fontes.forEach((f) => { const ultima = statusDe(m.id, f.codigo); %>
+              <tr>
+                <td><%= f.nome %></td>
+                <td><%= f.dado_trazido %></td>
+                <td><%= ultima ? ultima.toLocaleDateString('pt-BR') : 'Nunca coletado' %></td>
+                <td>
+                  <% if (f.integracao === 'api') { %>
+                    <form method="POST" action="/central-atualizacoes/<%= m.id %>/ibge">
+                      <button class="rsr-btn rsr-btn-secundario" type="submit" style="height:34px;padding:0 12px;font-size:12px">Buscar agora</button>
+                    </form>
+                  <% } else { %>
+                    <form method="POST" action="/central-atualizacoes/<%= m.id %>/<%= f.codigo %>" enctype="multipart/form-data" style="display:flex;gap:6px;align-items:center">
+                      <input type="file" name="arquivo" accept=".csv,text/csv" required style="font-size:12px;max-width:160px">
+                      <button class="rsr-btn rsr-btn-secundario" type="submit" style="height:34px;padding:0 12px;font-size:12px">Importar</button>
+                    </form>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% }) %>
+<% } %>
+<%- include('../partials/shell-fim', { versao: versao }) %>

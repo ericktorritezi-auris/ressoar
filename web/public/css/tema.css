@@ -149,6 +149,91 @@ a { color: var(--accent); }
   gap: 8px;
 }
 
+/* ---- Componentes reaproveitados pelos modulos (municipios, usuarios,
+   indicadores, central de atualizacoes) — a partir da Fase 2 ---- */
+.rsr-btn-secundario {
+  background: none;
+  color: var(--text);
+  border: 1px solid var(--border);
+  height: 44px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rsr-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.rsr-toolbar h1 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  margin: 0;
+}
+
+.rsr-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.rsr-card + .rsr-card { margin-top: 16px; }
+
+.rsr-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.rsr-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; }
+
+.rsr-table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--bg-raised); }
+
+.rsr-table th, .rsr-table td {
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.rsr-table th { color: var(--text-soft); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.rsr-table tr:last-child td { border-bottom: none; }
+
+.rsr-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.rsr-badge-mint { background: rgba(46, 158, 117, .14); color: var(--mint); }
+.rsr-badge-coral { background: rgba(255, 138, 101, .14); color: var(--coral); }
+.rsr-badge-neutro { background: var(--bg-sunken); color: var(--text-soft); }
+
+.rsr-vazio {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.rsr-sucesso {
+  padding: 10px 14px;
+  border-radius: 9px;
+  background: rgba(46, 158, 117, .12);
+  color: var(--mint);
+  font-size: 13px;
+}
+
 /* Mobile-first: menu lateral vira overlay, nunca empurra o conteudo. */
 @media (max-width: 860px) {
   .rsr-sidebar {

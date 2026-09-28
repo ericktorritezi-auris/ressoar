@@ -29,4 +29,16 @@ function exigirAutenticacao(req, res, next) {
   next();
 }
 
-module.exports = { tenantMiddleware, exigirAutenticacao };
+// Master e gestor_carteira sao os unicos perfis que cadastram/editam
+// municipios, usuarios e importam dados publicos (secao 2 do mapeamento).
+function exigirMaster(req, res, next) {
+  if (!req.tenant || !req.tenant.autenticado) {
+    return res.redirect('/login');
+  }
+  if (!req.tenant.isMaster) {
+    return res.status(403).send('Acesso restrito ao master e ao gestor de carteira.');
+  }
+  next();
+}
+
+module.exports = { tenantMiddleware, exigirAutenticacao, exigirMaster, PERFIS_MASTER };

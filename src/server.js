@@ -6,11 +6,16 @@ const cookieParser = require('cookie-parser');
 const env = require('./config/env');
 const { tenantMiddleware, exigirAutenticacao } = require('./middlewares/tenant');
 const rotasAuth = require('./modules/auth/rotas');
+const rotasMunicipios = require('./modules/municipios/rotas');
+const rotasUsuarios = require('./modules/usuarios/rotas');
+const rotasIndicadores = require('./modules/indicadores/rotas');
+const rotasCentralAtualizacoes = require('./modules/central-atualizacoes/rotas');
 
 const app = express();
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '..', 'web', 'views'));
+app.locals.versao = env.RESSOAR_VERSION;
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -34,6 +39,10 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/', rotasAuth);
+app.use('/', exigirAutenticacao, rotasMunicipios);
+app.use('/', exigirAutenticacao, rotasUsuarios);
+app.use('/', exigirAutenticacao, rotasIndicadores);
+app.use('/', exigirAutenticacao, rotasCentralAtualizacoes);
 
 app.get('/painel', exigirAutenticacao, (req, res) => {
   res.render('painel', { usuario: req.tenant.usuario, versao: env.RESSOAR_VERSION });

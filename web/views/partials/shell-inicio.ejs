@@ -10,6 +10,8 @@
     <a class="rsr-navitem <%= paginaAtiva === 'painel' ? 'ativo' : '' %>" href="/painel">Painel</a>
     <% if (['master','gestor_carteira'].includes(usuario.perfil)) { %>
       <a class="rsr-navitem <%= paginaAtiva === 'municipios' ? 'ativo' : '' %>" href="/municipios">Municípios</a>
+      <a class="rsr-navitem <%= paginaAtiva === 'usuarios' ? 'ativo' : '' %>" href="/usuarios">Usuários</a>
+      <a class="rsr-navitem <%= paginaAtiva === 'central-atualizacoes' ? 'ativo' : '' %>" href="/central-atualizacoes">Central de Atualizações</a>
     <% } %>
     <div style="margin-top:auto">
       <a class="rsr-navitem" href="/ajuda">Ajuda</a>

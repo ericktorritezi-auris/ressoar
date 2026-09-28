@@ -1,0 +1,92 @@
+<%
+function rotuloChave(chave) {
+  const nomes = { populacao: 'População', area_km2: 'Área (km²)', densidade_hab_km2: 'Densidade (hab/km²)' };
+  return nomes[chave] || chave;
+}
+function formatarValor(v) {
+  if (v.valor_numerico !== null && v.valor_numerico !== undefined) return Number(v.valor_numerico).toLocaleString('pt-BR');
+  return v.valor_texto || '—';
+}
+const eixosComIndicadores = eixos.map((e) => ({
+  ...e,
+  itens: indicadores.filter((i) => i.eixo_codigo === e.codigo),
+}));
+%>
+<%- include('../partials/shell-inicio', { titulo: municipio.nome, paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1><%= municipio.nome %> — <%= municipio.uf %></h1>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <a class="rsr-btn rsr-btn-secundario" style="display:inline-flex;align-items:center;text-decoration:none" href="/municipios/<%= municipio.id %>/editar">Editar cadastro</a>
+    <a class="rsr-btn rsr-btn-primario" style="padding:0 18px;display:inline-flex;align-items:center;text-decoration:none" href="/municipios/<%= municipio.id %>/indicadores/novo">+ Indicador</a>
+  </div>
+</div>
+
+<div class="rsr-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+    <h2 style="margin:0;font-size:16px">Contexto do município</h2>
+    <div style="display:flex;gap:8px">
+      <form method="POST" action="/municipios/<%= municipio.id %>/atualizar-dados-ibge">
+        <button class="rsr-btn rsr-btn-secundario" type="submit" <%= municipio.codigo_ibge ? '' : 'disabled' %>>Buscar agora (IBGE)</button>
+      </form>
+      <form method="POST" action="/municipios/<%= municipio.id %>/congelar-linha-base" onsubmit="return confirm('Congelar a linha de base agora, com os dados públicos atuais?')">
+        <button class="rsr-btn rsr-btn-secundario" type="submit" <%= dadosPublicos.length ? '' : 'disabled' %>>Congelar linha de base</button>
+      </form>
+    </div>
+  </div>
+
+  <% if (!municipio.codigo_ibge) { %>
+    <p style="font-size:13px;color:var(--text-soft);margin-top:14px">Cadastre um código IBGE para preencher dados públicos automaticamente.</p>
+  <% } else if (dadosPublicos.length === 0) { %>
+    <p style="font-size:13px;color:var(--text-soft);margin-top:14px">Nenhum dado público coletado ainda. Use "Buscar agora" ou aguarde a próxima coleta em lote.</p>
+  <% } else { %>
+    <div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:16px">
+      <% dadosPublicos.forEach((v) => { %>
+        <div>
+          <div style="font-size:12px;color:var(--text-soft)"><%= rotuloChave(v.chave) %></div>
+          <div style="font-size:22px;font-weight:700"><%= formatarValor(v) %></div>
+          <div style="font-size:11px;color:var(--text-soft)"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <% if (snapshot.length > 0) { %>
+    <p style="font-size:12px;color:var(--text-soft);margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      Linha de base congelada em <%= new Date(snapshot[0].congelado_em).toLocaleDateString('pt-BR') %>
+      (<%= snapshot.length %> valor(es)), usada como referência de evolução do programa.
+    </p>
+  <% } %>
+</div>
+
+<div class="rsr-card">
+  <h2 style="margin:0 0 14px;font-size:16px">Catálogo de indicadores</h2>
+  <% if (indicadores.length === 0) { %>
+    <div class="rsr-vazio">Nenhum indicador cadastrado ainda para este município.</div>
+  <% } else { %>
+    <% eixosComIndicadores.forEach((eixo) => { if (eixo.itens.length === 0) return; %>
+      <div style="margin-bottom:18px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px"><%= eixo.codigo %>. <%= eixo.nome %></div>
+        <div class="rsr-table-wrap">
+          <table class="rsr-table">
+            <thead>
+              <tr><th>Indicador</th><th>Linha de base</th><th>Meta</th><th>Periodicidade</th><th>Fonte</th><th></th></tr>
+            </thead>
+            <tbody>
+              <% eixo.itens.forEach((i) => { %>
+                <tr>
+                  <td><%= i.nome %> <% if (!i.ativo) { %><span class="rsr-badge rsr-badge-neutro">Inativo</span><% } %></td>
+                  <td><%= i.linha_base !== null ? i.linha_base : '—' %> <%= i.unidade || '' %></td>
+                  <td><%= i.meta !== null ? i.meta : '—' %> <%= i.unidade || '' %></td>
+                  <td><%= i.periodicidade %></td>
+                  <td><span class="rsr-badge"><%= i.fonte_dado.replace('_', ' ') %></span></td>
+                  <td><a href="/municipios/<%= municipio.id %>/indicadores/<%= i.id %>/editar" style="font-size:13px">Editar</a></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% }) %>
+  <% } %>
+</div>
+<%- include('../partials/shell-fim', { versao: versao }) %>

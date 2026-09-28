@@ -1,0 +1,40 @@
+<%- include('../partials/shell-inicio', { titulo: 'Municípios', paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1>Municípios</h1>
+  <a class="rsr-btn rsr-btn-primario" style="padding:0 18px;display:inline-flex;align-items:center" href="/municipios/novo">+ Novo município</a>
+</div>
+
+<% if (municipios.length === 0) { %>
+  <div class="rsr-card rsr-vazio">Nenhum município cadastrado ainda.</div>
+<% } else { %>
+  <div class="rsr-table-wrap">
+    <table class="rsr-table">
+      <thead>
+        <tr>
+          <th>Município</th>
+          <th>UF</th>
+          <th>Código IBGE</th>
+          <th>População</th>
+          <th>Vigência do contrato</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% municipios.forEach((m) => { %>
+          <tr>
+            <td>
+              <a href="/municipios/<%= m.id %>" style="font-weight:600;text-decoration:none;color:var(--text)"><%= m.nome %></a>
+              <% if (m.eh_municipio_teste) { %> <span class="rsr-badge rsr-badge-neutro">Teste</span><% } %>
+            </td>
+            <td><%= m.uf %></td>
+            <td><%= m.codigo_ibge || '—' %></td>
+            <td><%= m.populacao ? Number(m.populacao).toLocaleString('pt-BR') : '—' %></td>
+            <td><%= m.contrato_vigencia || '—' %></td>
+            <td><a href="/municipios/<%= m.id %>/editar" style="font-size:13px">Editar</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+<%- include('../partials/shell-fim', { versao: versao }) %>
