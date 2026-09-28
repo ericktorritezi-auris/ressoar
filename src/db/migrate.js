@@ -25,22 +25,32 @@ const PASTA_MIGRATIONS = path.join(__dirname, 'migrations');
 // Railway se detectar o problema, porque nao ha como eu verificar o role
 // de producao a partir daqui.
 async function verificarBypassDeRLS(client) {
+  // Uma unica chamada de console (nao 9 chamadas separadas): alguns
+  // agregadores de log (Railway incluso) agrupam uma rajada de
+  // console.error() sincronos numa unica entrada visual e so mostram um
+  // preview — foi o que aconteceu na primeira versao deste diagnostico
+  // (so a linha de "====" apareceu no log). Uma string multi-linha numa
+  // chamada so evita essa ambiguidade.
   const { rows } = await client.query(
     `SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user`
   );
   const role = rows[0];
+  console.log(`[migrate] diagnostico RLS — role de conexao: ${role ? role.rolname : '?'} | rolsuper=${role ? role.rolsuper : '?'} | rolbypassrls=${role ? role.rolbypassrls : '?'}`);
+
   if (role && (role.rolsuper || role.rolbypassrls)) {
-    console.error('==================================================================');
-    console.error('[migrate] ALERTA CRITICO DE SEGURANCA: o role de conexao da aplicacao');
-    console.error(`[migrate] ("${role.rolname}") tem rolsuper=${role.rolsuper} rolbypassrls=${role.rolbypassrls}.`);
-    console.error('[migrate] O Postgres NUNCA aplica Row-Level Security a um role nessas');
-    console.error('[migrate] condicoes — TODAS as policies de isolamento por municipio');
-    console.error('[migrate] (municipios, usuarios, indicadores, snapshots_linha_base) ficam');
-    console.error('[migrate] sem efeito, mesmo corretas. Master e gestor_carteira veem TUDO.');
-    console.error('[migrate] Correcao: criar um role de aplicacao dedicado, sem SUPERUSER e');
-    console.error('[migrate] sem BYPASSRLS, e apontar DATABASE_URL pra ele — nunca usar o role');
-    console.error('[migrate] administrativo padrao do provedor para a conexao da aplicacao.');
-    console.error('==================================================================');
+    console.error([
+      '==================================================================',
+      '[migrate] ALERTA CRITICO DE SEGURANCA: o role de conexao da aplicacao',
+      `[migrate] ("${role.rolname}") tem rolsuper=${role.rolsuper} rolbypassrls=${role.rolbypassrls}.`,
+      '[migrate] O Postgres NUNCA aplica Row-Level Security a um role nessas',
+      '[migrate] condicoes — TODAS as policies de isolamento por municipio',
+      '[migrate] (municipios, usuarios, indicadores, snapshots_linha_base) ficam',
+      '[migrate] sem efeito, mesmo corretas. Master e gestor_carteira veem TUDO.',
+      '[migrate] Correcao: criar um role de aplicacao dedicado, sem SUPERUSER e',
+      '[migrate] sem BYPASSRLS, e apontar DATABASE_URL pra ele — nunca usar o role',
+      '[migrate] administrativo padrao do provedor para a conexao da aplicacao.',
+      '==================================================================',
+    ].join('\n'));
   } else {
     console.log(`[migrate] ok: role de conexao ("${role ? role.rolname : '?'}") respeita RLS (sem SUPERUSER/BYPASSRLS).`);
   }
