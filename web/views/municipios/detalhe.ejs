@@ -25,10 +25,10 @@ function formatarValor(v) {
 // taxa de ocupação, estatísticas de empresas, IDEB, mortalidade infantil,
 // infraestrutura hospitalar, saneamento, limites geográficos/malhas).
 const BLOCOS = [
-  { titulo: '1. Território e geografia', chaves: ['mesorregiao', 'microrregiao', 'regiao', 'regiao_imediata', 'area_km2'] },
-  { titulo: '2. Demografia', chaves: ['populacao', 'populacao_censo_2022', 'densidade_hab_km2'] },
-  { titulo: '3. Economia e trabalho', chaves: ['pib_mil_reais', 'pib_per_capita'] },
-  { titulo: '4. Educação', chaves: ['taxa_alfabetizacao'] },
+  { numero: '1', titulo: 'Território e geografia', chaves: ['mesorregiao', 'microrregiao', 'regiao', 'regiao_imediata', 'area_km2'] },
+  { numero: '2', titulo: 'Demografia', chaves: ['populacao', 'populacao_censo_2022', 'densidade_hab_km2'] },
+  { numero: '3', titulo: 'Economia e trabalho', chaves: ['pib_mil_reais', 'pib_per_capita'] },
+  { numero: '4', titulo: 'Educação', chaves: ['taxa_alfabetizacao'] },
 ];
 const dadosPorChave = {};
 dadosPublicos.forEach((v) => { dadosPorChave[v.chave] = v; });
@@ -42,7 +42,15 @@ const eixosComIndicadores = eixos.map((e) => ({
 %>
 <%- include('../partials/shell-inicio', { titulo: municipio.nome, paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
 <div class="rsr-toolbar">
-  <h1><%= municipio.nome %> — <%= municipio.uf %></h1>
+  <div class="rsr-entidade-header">
+    <% if (municipio.brasao_url) { %>
+      <img class="rsr-brasao" src="<%= municipio.brasao_url %>" alt="Brasão de <%= municipio.nome %>">
+    <% } %>
+    <div>
+      <h1><%= municipio.nome %></h1>
+      <div class="rsr-entidade-sub"><%= municipio.uf %><% if (dadosPorChave.regiao) { %> · Região <%= dadosPorChave.regiao.valor_texto %><% } %></div>
+    </div>
+  </div>
   <div style="display:flex;gap:10px;flex-wrap:wrap">
     <a class="rsr-btn rsr-btn-secundario" style="display:inline-flex;align-items:center;text-decoration:none" href="/municipios/<%= municipio.id %>/editar">Editar cadastro</a>
     <a class="rsr-btn rsr-btn-primario" style="padding:0 18px;display:inline-flex;align-items:center;text-decoration:none" href="/municipios/<%= municipio.id %>/indicadores/novo">+ Indicador</a>
@@ -51,7 +59,7 @@ const eixosComIndicadores = eixos.map((e) => ({
 
 <div class="rsr-card">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-    <h2 style="margin:0;font-size:16px">Contexto do município</h2>
+    <h2 style="margin:0;font-size:16px;font-family:var(--font-display)">Contexto do município</h2>
     <div style="display:flex;gap:8px">
       <form method="POST" action="/municipios/<%= municipio.id %>/atualizar-dados-ibge">
         <button class="rsr-btn rsr-btn-secundario" type="submit" <%= municipio.codigo_ibge ? '' : 'disabled' %>>Buscar agora (IBGE)</button>
@@ -68,14 +76,14 @@ const eixosComIndicadores = eixos.map((e) => ({
     <p style="font-size:13px;color:var(--text-soft);margin-top:14px">Nenhum dado público coletado ainda. Use "Buscar agora" ou aguarde a próxima coleta em lote.</p>
   <% } else { %>
     <% blocosComDados.forEach((bloco) => { %>
-      <div style="margin-top:18px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px"><%= bloco.titulo %></div>
-        <div style="display:flex;gap:22px;flex-wrap:wrap">
+      <div class="rsr-secao">
+        <div class="rsr-secao-titulo"><span class="rsr-secao-numero"><%= bloco.numero %></span> <%= bloco.titulo %></div>
+        <div class="rsr-stats-grid">
           <% bloco.itens.forEach((v) => { %>
-            <div>
-              <div style="font-size:12px;color:var(--text-soft)"><%= rotuloChave(v.chave) %></div>
-              <div style="font-size:22px;font-weight:700"><%= formatarValor(v) %></div>
-              <div style="font-size:11px;color:var(--text-soft)"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
+            <div class="rsr-stat">
+              <div class="rsr-stat-rotulo"><%= rotuloChave(v.chave) %></div>
+              <div class="rsr-stat-valor"><%= formatarValor(v) %></div>
+              <div class="rsr-stat-fonte"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
             </div>
           <% }) %>
         </div>
@@ -92,7 +100,7 @@ const eixosComIndicadores = eixos.map((e) => ({
 </div>
 
 <div class="rsr-card">
-  <h2 style="margin:0 0 14px;font-size:16px">Catálogo de indicadores</h2>
+  <h2 style="margin:0 0 14px;font-size:16px;font-family:var(--font-display)">Catálogo de indicadores</h2>
   <% if (indicadores.length === 0) { %>
     <div class="rsr-vazio">Nenhum indicador cadastrado ainda para este município.</div>
   <% } else { %>
