@@ -160,10 +160,18 @@ if (municipio.mandato_fim) {
         <div class="rsr-secao-titulo"><span class="rsr-secao-numero"><%= BLOCOS.length + indice + 1 %></span> Outros dados públicos · <%= fonte %></div>
         <div class="rsr-stats-grid">
           <% outrosDadosPorFonte[fonte].forEach((v) => { %>
-            <div class="rsr-stat">
+            <div class="rsr-stat" style="position:relative">
               <div class="rsr-stat-rotulo"><%= rotuloChave(v.chave) %></div>
               <div class="rsr-stat-valor"><%= formatarValor(v) %></div>
               <div class="rsr-stat-fonte"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
+              <form method="POST" action="/municipios/<%= municipio.id %>/dados-publicos/excluir"
+                    onsubmit="return confirm('Excluir este dado importado? Isso remove o histórico dessa chave para esta fonte — pode subir o arquivo de novo depois, se precisar.')"
+                    style="position:absolute;top:10px;right:10px">
+                <input type="hidden" name="chave" value="<%= v.chave %>">
+                <input type="hidden" name="fonte_codigo" value="<%= v.fonte_codigo %>">
+                <button type="submit" title="Excluir este dado"
+                        style="background:none;border:none;color:var(--text-soft);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px">✕</button>
+              </form>
             </div>
           <% }) %>
         </div>
