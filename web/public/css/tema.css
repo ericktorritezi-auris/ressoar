@@ -138,6 +138,14 @@ a { color: var(--accent); }
 
 .rsr-conteudo { flex-grow: 1; padding: 28px; }
 
+/* Bug #5 (achado na rodada de testes de 2026-09-28): o botao de abrir o
+   menu no mobile tinha display:none fixo no HTML e nada aqui revertia
+   isso — ficava invisivel em qualquer largura de tela. No desktop o menu
+   lateral fica sempre visivel (.rsr-sidebar sem position:fixed fora do
+   media query abaixo), entao o botao continua escondido por padrao;
+   dentro do media query mobile (abaixo) ele volta a aparecer. */
+.rsr-btn-abrir-menu { display: none; }
+
 .rsr-rodape {
   padding: 16px 28px;
   border-top: 1px solid var(--border);
@@ -354,6 +362,7 @@ a { color: var(--accent); }
     z-index: 20;
   }
   .rsr-scrim.visivel { display: block; }
+  .rsr-btn-abrir-menu { display: inline-flex; align-items: center; justify-content: center; }
 
   .rsr-stats-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
   .rsr-stat { padding: 12px; }
@@ -362,4 +371,45 @@ a { color: var(--accent); }
   .rsr-brasao { width: 40px; height: 40px; }
   .rsr-conteudo { padding: 16px; }
   .rsr-card { padding: 16px; }
+
+  /* Bug #6 (achado na rodada de testes de 2026-09-28): a tabela de
+     indicadores (e as demais .rsr-table do sistema) usava scroll
+     horizontal no mobile, violando a regra explícita da seção 9 do
+     mapeamento ("sem barra de rolagem horizontal em nenhuma tela"). Cada
+     linha vira um "cartão" empilhado, com o rótulo da coluna (de
+     data-rotulo, em cada <td>) ao lado do valor. */
+  .rsr-table-wrap { overflow-x: visible; border: none; }
+  .rsr-table, .rsr-table thead, .rsr-table tbody, .rsr-table tr, .rsr-table td, .rsr-table th {
+    display: block;
+    width: 100%;
+  }
+  .rsr-table thead { position: absolute; left: -9999px; } /* mantém acessível a leitores de tela, some visualmente */
+  .rsr-table tr {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    background: var(--bg-raised);
+  }
+  .rsr-table tr:last-child { margin-bottom: 0; }
+  .rsr-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    text-align: right;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .rsr-table td:last-child { border-bottom: none; }
+  .rsr-table td[data-rotulo]::before {
+    content: attr(data-rotulo);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-soft);
+    text-align: left;
+    flex-shrink: 0;
+  }
 }

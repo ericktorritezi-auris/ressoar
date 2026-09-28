@@ -3,7 +3,7 @@
 const { pool, withTenantContext } = require('../../config/db');
 
 function contextoDe(tenant) {
-  return { municipioId: tenant.municipioId, isMaster: tenant.isMaster };
+  return { municipioId: tenant.municipioId, isMaster: tenant.isMaster, usuarioId: tenant.usuarioId };
 }
 
 // eixos e fixo e publico (A a E) — nao precisa de RLS nem de tenant.

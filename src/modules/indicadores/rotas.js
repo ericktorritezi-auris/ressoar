@@ -8,9 +8,10 @@ const municipiosRepo = require('../municipios/repositorio');
 
 const router = express.Router();
 
-router.use(exigirMaster);
-
-router.get('/municipios/:municipioId/indicadores/novo', async (req, res) => {
+// exigirMaster aplicado rota a rota — ver comentario em usuarios/rotas.js
+// (Bug #2): router.use() sem caminho intercepta toda requisicao que entra
+// por este router, mesmo as que nao batem nenhuma rota aqui dentro.
+router.get('/municipios/:municipioId/indicadores/novo', exigirMaster, async (req, res) => {
   const municipio = await municipiosRepo.buscarPorId(req.tenant, req.params.municipioId);
   if (!municipio) return res.status(404).send('Município não encontrado.');
   const eixos = await repo.listarEixos();
@@ -24,7 +25,7 @@ router.get('/municipios/:municipioId/indicadores/novo', async (req, res) => {
   });
 });
 
-router.post('/municipios/:municipioId/indicadores', async (req, res) => {
+router.post('/municipios/:municipioId/indicadores', exigirMaster, async (req, res) => {
   const { eixo_id: eixoId, nome, linha_base: linhaBase, meta, unidade, periodicidade, fonte_dado: fonteDado } = req.body;
   try {
     await repo.criar(req.tenant, req.params.municipioId, {
@@ -52,7 +53,7 @@ router.post('/municipios/:municipioId/indicadores', async (req, res) => {
   }
 });
 
-router.get('/municipios/:municipioId/indicadores/:id/editar', async (req, res) => {
+router.get('/municipios/:municipioId/indicadores/:id/editar', exigirMaster, async (req, res) => {
   const municipio = await municipiosRepo.buscarPorId(req.tenant, req.params.municipioId);
   const indicador = await repo.buscarPorId(req.tenant, req.params.id);
   if (!municipio || !indicador) return res.status(404).send('Não encontrado.');
@@ -67,7 +68,7 @@ router.get('/municipios/:municipioId/indicadores/:id/editar', async (req, res) =
   });
 });
 
-router.post('/municipios/:municipioId/indicadores/:id', async (req, res) => {
+router.post('/municipios/:municipioId/indicadores/:id', exigirMaster, async (req, res) => {
   const { eixo_id: eixoId, nome, linha_base: linhaBase, meta, unidade, periodicidade, fonte_dado: fonteDado, ativo } = req.body;
   await repo.atualizar(req.tenant, req.params.id, {
     eixoId,
