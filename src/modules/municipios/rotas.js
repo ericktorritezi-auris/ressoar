@@ -61,23 +61,44 @@ router.get('/municipios/novo', async (req, res) => {
   });
 });
 
+// Chamado pelo navegador (fetch) assim que o usuario sai do campo de
+// codigo IBGE, para preencher nome/UF na hora — sem isso, o preenchimento
+// so acontecia no servidor DEPOIS do clique em Salvar, tarde demais para
+// ajudar quem esta preenchendo o formulario (secao 3.1 do mapeamento).
+router.get('/municipios/buscar-ibge/:codigo', async (req, res) => {
+  const codigo = (req.params.codigo || '').trim();
+  if (!/^\d{7}$/.test(codigo)) {
+    return res.status(400).json({ erro: 'Código IBGE deve ter 7 dígitos.' });
+  }
+  const localidade = await servicoIbge.buscarLocalidade(codigo);
+  if (!localidade) {
+    return res.status(404).json({ erro: 'Código IBGE não encontrado ou serviço indisponível agora.' });
+  }
+  res.json(localidade);
+});
+
 router.post('/municipios', upload.single('brasao_arquivo'), async (req, res) => {
   try {
     const { codigo_ibge: codigoIbge, nome, uf, populacao, contrato_inicio: contratoInicio,
       contrato_vigencia: contratoVigencia, gestor_carteira_id: gestorCarteiraId,
       brasao_url: brasaoUrlInformada } = req.body;
 
-    let nomeFinal = nome;
-    let ufFinal = uf;
+    let nomeFinal = (nome || '').trim();
+    let ufFinal = (uf || '').trim();
 
-    // Codigo IBGE informado: busca nome/UF ao vivo antes de gravar
-    // (secao 3.1 — "preenche automaticamente nome, UF, população, área").
+    // Codigo IBGE informado: busca nome/UF ao vivo antes de gravar (mesma
+    // busca do endpoint acima — cobre quem enviou o formulario sem passar
+    // pelo JS, ou preencheu o codigo mas apagou nome/UF depois).
     if (codigoIbge) {
       const localidade = await servicoIbge.buscarLocalidade(codigoIbge.trim());
       if (localidade) {
         nomeFinal = localidade.nome || nomeFinal;
         ufFinal = localidade.uf || ufFinal;
       }
+    }
+
+    if (!nomeFinal || !ufFinal) {
+      throw new Error('Informe um código IBGE válido ou preencha nome e UF manualmente.');
     }
 
     const brasaoUrl = resolverBrasaoUrl(brasaoUrlInformada, req.file);
@@ -110,7 +131,9 @@ router.post('/municipios', upload.single('brasao_arquivo'), async (req, res) => 
       versao: req.app.locals.versao,
       municipio: req.body,
       gestores,
-      erro: 'Não foi possível salvar o município. Confira os dados e tente novamente.',
+      erro: erro.message && erro.message.startsWith('Informe')
+        ? erro.message
+        : 'Não foi possível salvar o município. Confira os dados e tente novamente.',
     });
   }
 });

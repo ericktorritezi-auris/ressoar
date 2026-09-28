@@ -18,17 +18,18 @@ function dataInputValue(v) {
     <div class="rsr-form-grid">
       <div>
         <label class="rsr-label">Código IBGE <% if (!municipio) { %>(preenche nome, UF, população e área automaticamente)<% } %></label>
-        <input class="rsr-input" type="text" name="codigo_ibge" maxlength="7" pattern="\d{7}"
+        <input class="rsr-input" id="campo-codigo-ibge" type="text" name="codigo_ibge" maxlength="7" pattern="\d{7}"
                value="<%= municipio ? municipio.codigo_ibge || '' : '' %>" <%= municipio ? 'readonly' : '' %>
                placeholder="Ex.: 4116703">
+        <span id="status-busca-ibge" style="display:block;font-size:12px;color:var(--text-soft);margin-top:4px"></span>
       </div>
       <div>
-        <label class="rsr-label">Nome do município</label>
-        <input class="rsr-input" type="text" name="nome" required value="<%= municipio ? municipio.nome || '' : '' %>">
+        <label class="rsr-label">Nome do município <% if (!municipio) { %>(preenchido pelo código IBGE, ou digite manualmente)<% } %></label>
+        <input class="rsr-input" id="campo-nome" type="text" name="nome" value="<%= municipio ? municipio.nome || '' : '' %>">
       </div>
       <div>
         <label class="rsr-label">UF</label>
-        <input class="rsr-input" type="text" name="uf" maxlength="2" required style="text-transform:uppercase" value="<%= municipio ? municipio.uf || '' : '' %>">
+        <input class="rsr-input" id="campo-uf" type="text" name="uf" maxlength="2" style="text-transform:uppercase" value="<%= municipio ? municipio.uf || '' : '' %>">
       </div>
       <div>
         <label class="rsr-label">População (se não usar código IBGE)</label>
@@ -70,4 +71,35 @@ function dataInputValue(v) {
     </div>
   </form>
 </div>
+<% if (!municipio) { %>
+<script>
+(function () {
+  var campoCodigo = document.getElementById('campo-codigo-ibge');
+  var campoNome = document.getElementById('campo-nome');
+  var campoUf = document.getElementById('campo-uf');
+  var status = document.getElementById('status-busca-ibge');
+  if (!campoCodigo) return;
+
+  campoCodigo.addEventListener('blur', function () {
+    var codigo = campoCodigo.value.trim();
+    if (!/^\d{7}$/.test(codigo)) return;
+
+    status.textContent = 'Buscando no IBGE…';
+    fetch('/municipios/buscar-ibge/' + codigo)
+      .then(function (resposta) {
+        if (!resposta.ok) throw new Error('nao encontrado');
+        return resposta.json();
+      })
+      .then(function (dados) {
+        if (dados.nome) campoNome.value = dados.nome;
+        if (dados.uf) campoUf.value = dados.uf;
+        status.textContent = 'Preenchido a partir do IBGE.';
+      })
+      .catch(function () {
+        status.textContent = 'Não foi possível buscar esse código agora — preencha nome e UF manualmente.';
+      });
+  });
+})();
+</script>
+<% } %>
 <%- include('../partials/shell-fim', { versao: versao }) %>
