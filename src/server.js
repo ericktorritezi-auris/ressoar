@@ -24,6 +24,15 @@ app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '..', 'web', 'views'));
 app.locals.versao = env.RESSOAR_VERSION;
+// Bug encontrado em 2026-09-28 (menu mobile "corrigido" mas continuando
+// invisivel apos o deploy): tema.css/tema.js sao servidos sem
+// cache-busting, e RESSOAR_VERSION so muda quando alguem lembra de
+// atualizar a env var — na pratica o navegador ficava com a versao
+// antiga do CSS em cache entre deploys. versaoAssets muda sozinho a cada
+// boot do processo (todo deploy no Railway reinicia o processo), entao
+// o link do CSS/JS muda de URL a cada deploy sem depender de ninguem
+// lembrar de bumpar RESSOAR_VERSION.
+app.locals.versaoAssets = Date.now();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());

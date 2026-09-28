@@ -11,6 +11,41 @@ const env = require('../config/env');
 
 const PASTA_MIGRATIONS = path.join(__dirname, 'migrations');
 
+// Diagnostico adicionado em 2026-09-28: o isolamento por RLS (municipios,
+// usuarios, indicadores, snapshots_linha_base — Bug #7) foi testado e
+// confirmado localmente contra um role sem privilegio de superusuario,
+// mas o Postgres NUNCA aplica Row-Level Security a um role superusuario
+// (nem com FORCE ROW LEVEL SECURITY) ou com o atributo BYPASSRLS — mesmo
+// que todas as policies estejam corretas. Bancos gerenciados (como o do
+// Railway) as vezes provisionam o usuario padrao da aplicacao como
+// superusuario. Se for o caso aqui, TODO o isolamento multi-tenant vira
+// decorativo silenciosamente, sem nenhum erro — exatamente o sintoma
+// relatado (gestor de carteira continua vendo todos os municipios mesmo
+// com a policy corrigida). Isso roda a cada deploy e grita no log do
+// Railway se detectar o problema, porque nao ha como eu verificar o role
+// de producao a partir daqui.
+async function verificarBypassDeRLS(client) {
+  const { rows } = await client.query(
+    `SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user`
+  );
+  const role = rows[0];
+  if (role && (role.rolsuper || role.rolbypassrls)) {
+    console.error('==================================================================');
+    console.error('[migrate] ALERTA CRITICO DE SEGURANCA: o role de conexao da aplicacao');
+    console.error(`[migrate] ("${role.rolname}") tem rolsuper=${role.rolsuper} rolbypassrls=${role.rolbypassrls}.`);
+    console.error('[migrate] O Postgres NUNCA aplica Row-Level Security a um role nessas');
+    console.error('[migrate] condicoes — TODAS as policies de isolamento por municipio');
+    console.error('[migrate] (municipios, usuarios, indicadores, snapshots_linha_base) ficam');
+    console.error('[migrate] sem efeito, mesmo corretas. Master e gestor_carteira veem TUDO.');
+    console.error('[migrate] Correcao: criar um role de aplicacao dedicado, sem SUPERUSER e');
+    console.error('[migrate] sem BYPASSRLS, e apontar DATABASE_URL pra ele — nunca usar o role');
+    console.error('[migrate] administrativo padrao do provedor para a conexao da aplicacao.');
+    console.error('==================================================================');
+  } else {
+    console.log(`[migrate] ok: role de conexao ("${role ? role.rolname : '?'}") respeita RLS (sem SUPERUSER/BYPASSRLS).`);
+  }
+}
+
 async function migrar() {
   const pool = new Pool({
     connectionString: env.DATABASE_URL,
@@ -52,6 +87,8 @@ async function migrar() {
         throw new Error(`Falha ao aplicar ${arquivo}: ${erro.message}`);
       }
     }
+
+    await verificarBypassDeRLS(client);
   } finally {
     client.release();
     await pool.end();

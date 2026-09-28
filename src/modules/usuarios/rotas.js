@@ -152,6 +152,21 @@ router.post('/usuarios/:id', exigirMaster, async (req, res) => {
     municipioId: municipioId || null,
     ativo: ativo === 'on',
   });
+
+  // "Municípios sob esta carteira" (edita a mesma coluna que o campo
+  // "Gestor de carteira responsável" no cadastro do município — só que a
+  // partir do lado do usuário). Restrito ao master de verdade: um
+  // gestor_carteira editando outro gestor_carteira só enxergaria, pelo
+  // RLS, os municípios da própria carteira — a lista ficaria incompleta e
+  // incorreta pra essa operação.
+  if (perfil === 'gestor_carteira' && req.tenant.isMaster) {
+    const municipiosMarcados = req.body.municipios_carteira;
+    const idsMarcados = Array.isArray(municipiosMarcados)
+      ? municipiosMarcados
+      : (municipiosMarcados ? [municipiosMarcados] : []);
+    await municipiosRepo.definirCarteiraDoGestor(req.tenant, req.params.id, idsMarcados);
+  }
+
   res.redirect('/usuarios');
 });
 

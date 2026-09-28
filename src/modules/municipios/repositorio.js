@@ -98,6 +98,37 @@ async function atualizarPopulacao(tenant, id, populacao) {
   );
 }
 
+// Reconcilia, numa unica operacao, quais municipios um gestor_carteira
+// administra — usado pelo checklist "Municípios sob esta carteira" na
+// tela do usuário (module usuarios), complementar ao campo "Gestor de
+// carteira responsável" na tela do município: os dois editam a MESMA
+// coluna (municipios.gestor_carteira_id), só que a partir de lados
+// diferentes.
+async function definirCarteiraDoGestor(tenant, gestorId, municipioIds) {
+  return withTenantContext(contextoDe(tenant), async (client) => {
+    await client.query('BEGIN');
+    try {
+      // Tira o gestor de qualquer municipio que ele administrava antes e
+      // que nao esta mais marcado.
+      await client.query(
+        `UPDATE municipios SET gestor_carteira_id = NULL
+          WHERE gestor_carteira_id = $1 AND NOT (id = ANY($2::uuid[]))`,
+        [gestorId, municipioIds]
+      );
+      if (municipioIds.length > 0) {
+        await client.query(
+          `UPDATE municipios SET gestor_carteira_id = $1 WHERE id = ANY($2::uuid[])`,
+          [gestorId, municipioIds]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (erro) {
+      await client.query('ROLLBACK');
+      throw erro;
+    }
+  });
+}
+
 async function listarGestoresCarteira(tenant) {
   return withTenantContext(contextoDe(tenant), async (client) => {
     const { rows } = await client.query(
@@ -146,6 +177,7 @@ module.exports = {
   atualizar,
   atualizarPopulacao,
   listarGestoresCarteira,
+  definirCarteiraDoGestor,
   salvarSnapshotLinhaBase,
   buscarSnapshotLinhaBase,
 };

@@ -40,6 +40,27 @@
           <% }) %>
         </select>
       </div>
+      <% if (registro && registro.perfil === 'gestor_carteira' && usuario.perfil === 'master') { %>
+        <div style="grid-column:1/-1" class="rsr-secao">
+          <div class="rsr-secao-titulo">Municípios sob esta carteira</div>
+          <p style="font-size:12px;color:var(--text-soft);margin:-4px 0 10px">
+            Marque os municípios que <%= registro.nome %> administra — é a mesma informação do campo
+            "Gestor de carteira responsável" no cadastro de cada município, só que reunida aqui.
+          </p>
+          <div style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto;padding:4px 0">
+            <% municipios.forEach((m) => { %>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px">
+                <input type="checkbox" name="municipios_carteira" value="<%= m.id %>"
+                       <%= m.gestor_carteira_id === registro.id ? 'checked' : '' %>>
+                <%= m.nome %> — <%= m.uf %>
+              </label>
+            <% }) %>
+            <% if (municipios.length === 0) { %>
+              <span style="font-size:13px;color:var(--text-soft)">Nenhum município cadastrado ainda.</span>
+            <% } %>
+          </div>
+        </div>
+      <% } %>
       <div>
         <label class="rsr-label">CPF</label>
         <input class="rsr-input" type="text" name="cpf" value="<%= registro ? registro.cpf || '' : '' %>">

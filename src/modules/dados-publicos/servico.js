@@ -31,6 +31,21 @@ async function buscarEArmazenarDadosIbge(tenant, municipioId, codigoIbge) {
  * fonte nesta fase — o formato e generico de proposito, para nao amarrar o
  * sistema ao layout de arquivo de cada orgao.
  */
+// Bug encontrado em 2026-09-28: um CSV com "3 colunas, 3 valores" foi
+// importado e virou UMA chave gigante (a linha inteira) com valor e
+// periodo vazios. Causa raiz: Excel/Google Sheets em configuracao
+// regional pt-BR exportam CSV separado por PONTO-E-VIRGULA, nao virgula
+// — porque a virgula ja e o separador decimal em pt-BR (ex.: "7,8"). O
+// parser so sabia ler separado por virgula, entao a linha inteira virava
+// um unico campo. Agora detecta o delimitador looking pela primeira
+// linha do arquivo (qual dos dois aparece mais vezes vence), aceitando
+// os dois formatos.
+function detectarDelimitador(primeiraLinha) {
+  const ocorrenciasVirgula = (primeiraLinha.match(/,/g) || []).length;
+  const ocorrenciasPontoVirgula = (primeiraLinha.match(/;/g) || []).length;
+  return ocorrenciasPontoVirgula > ocorrenciasVirgula ? ';' : ',';
+}
+
 function interpretarCsv(conteudo) {
   const linhas = conteudo
     .split(/\r?\n/)
@@ -39,14 +54,17 @@ function interpretarCsv(conteudo) {
 
   if (linhas.length === 0) return [];
 
+  const delimitador = detectarDelimitador(linhas[0]);
   const primeiraLinha = linhas[0].toLowerCase();
   const temCabecalho = primeiraLinha.startsWith('chave');
   const linhasDeDados = temCabecalho ? linhas.slice(1) : linhas;
 
   return linhasDeDados
     .map((linha) => {
-      const [chave, valor, periodo] = linha.split(',').map((c) => (c || '').trim());
+      const [chave, valor, periodo] = linha.split(delimitador).map((c) => (c || '').trim());
       if (!chave) return null;
+      // Com delimitador ";", a virgula em "7,8" e decimal (nao separador) —
+      // trocamos por ponto antes de tentar converter pra numero nos dois casos.
       const valorNumerico = Number(String(valor).replace(',', '.'));
       const ehNumero = valor !== '' && !Number.isNaN(valorNumerico);
       return {
