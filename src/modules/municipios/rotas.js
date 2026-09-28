@@ -81,7 +81,9 @@ router.post('/municipios', upload.single('brasao_arquivo'), async (req, res) => 
   try {
     const { codigo_ibge: codigoIbge, nome, uf, populacao, contrato_inicio: contratoInicio,
       contrato_vigencia: contratoVigencia, gestor_carteira_id: gestorCarteiraId,
-      brasao_url: brasaoUrlInformada } = req.body;
+      brasao_url: brasaoUrlInformada, prefeito_nome: prefeitoNome,
+      prefeito_partido: prefeitoPartido, mandato_inicio: mandatoInicio,
+      mandato_fim: mandatoFim } = req.body;
 
     let nomeFinal = (nome || '').trim();
     let ufFinal = (uf || '').trim();
@@ -112,6 +114,10 @@ router.post('/municipios', upload.single('brasao_arquivo'), async (req, res) => 
       contratoInicio: contratoInicio || null,
       contratoVigencia: contratoVigencia || null,
       gestorCarteiraId: gestorCarteiraId || null,
+      prefeitoNome: (prefeitoNome || '').trim() || null,
+      prefeitoPartido: (prefeitoPartido || '').trim() || null,
+      mandatoInicio: mandatoInicio || null,
+      mandatoFim: mandatoFim || null,
     });
 
     if (codigoIbge) {
@@ -176,7 +182,9 @@ router.get('/municipios/:id/editar', async (req, res) => {
 router.post('/municipios/:id', upload.single('brasao_arquivo'), async (req, res) => {
   const { nome, uf, populacao, contrato_inicio: contratoInicio,
     contrato_vigencia: contratoVigencia, gestor_carteira_id: gestorCarteiraId,
-    brasao_url: brasaoUrlInformada } = req.body;
+    brasao_url: brasaoUrlInformada, prefeito_nome: prefeitoNome,
+    prefeito_partido: prefeitoPartido, mandato_inicio: mandatoInicio,
+    mandato_fim: mandatoFim } = req.body;
 
   const brasaoUrl = resolverBrasaoUrl(brasaoUrlInformada, req.file);
 
@@ -188,6 +196,10 @@ router.post('/municipios/:id', upload.single('brasao_arquivo'), async (req, res)
     contratoInicio: contratoInicio || null,
     contratoVigencia: contratoVigencia || null,
     gestorCarteiraId: gestorCarteiraId || null,
+    prefeitoNome: (prefeitoNome || '').trim() || null,
+    prefeitoPartido: (prefeitoPartido || '').trim() || null,
+    mandatoInicio: mandatoInicio || null,
+    mandatoFim: mandatoFim || null,
   });
 
   res.redirect(`/municipios/${req.params.id}`);
