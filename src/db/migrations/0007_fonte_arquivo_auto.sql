@@ -1,0 +1,13 @@
+-- Nova busca única de dados municipais (2026-09-29): algumas fontes que
+-- hoje são "arquivo" (upload manual pelo master) na verdade têm um
+-- endereço estável de download num portal oficial (ex.: IDHM/Atlas
+-- Brasil) — dá pra baixar e importar automaticamente, sem o master
+-- precisar caçar e subir o arquivo certo. Isso é diferente de "arquivo"
+-- puro (sem automação possível, ex.: CNES/DATASUS) e diferente de "api"
+-- (resposta imediata, ex.: IBGE/Siconfi/InfoDengue) — daí o terceiro
+-- valor do enum.
+--
+-- ALTER TYPE ... ADD VALUE não pode ser usado na mesma transação em que
+-- o valor novo é lido/gravado — por isso este arquivo só adiciona o
+-- valor; o uso dele (migration 0008) fica em arquivo separado.
+ALTER TYPE tipo_integracao_fonte ADD VALUE IF NOT EXISTS 'arquivo_auto';

@@ -50,8 +50,12 @@ function statusDe(municipioId, codigoFonte) {
                 <td data-rotulo="Última coleta"><%= ultima ? ultima.toLocaleDateString('pt-BR') : 'Nunca coletado' %></td>
                 <td data-rotulo="">
                   <% if (f.integracao === 'api') { %>
-                    <form method="POST" action="/central-atualizacoes/<%= m.id %>/ibge">
+                    <form method="POST" action="/central-atualizacoes/<%= m.id %>/buscar/<%= f.codigo %>">
                       <button class="rsr-btn rsr-btn-secundario" type="submit" style="height:34px;padding:0 12px;font-size:12px">Buscar agora</button>
+                    </form>
+                  <% } else if (f.integracao === 'arquivo_auto') { %>
+                    <form method="POST" action="/central-atualizacoes/<%= m.id %>/auto/<%= f.codigo %>">
+                      <button class="rsr-btn rsr-btn-secundario" type="submit" style="height:34px;padding:0 12px;font-size:12px">Baixar e importar</button>
                     </form>
                   <% } else { %>
                     <form method="POST" action="/central-atualizacoes/<%= m.id %>/<%= f.codigo %>" enctype="multipart/form-data" style="display:flex;gap:6px;align-items:center">

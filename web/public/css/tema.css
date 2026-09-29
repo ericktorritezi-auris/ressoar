@@ -504,6 +504,30 @@ a { color: var(--accent); }
   .rsr-fontes-linha { grid-template-columns: 1fr; gap: 2px; }
 }
 
+/* ---- Busca única de dados municipais (2026-09-29): rodapé de status do
+   botão "Buscar dados do município", níveis de alerta epidemiológico
+   (InfoDengue), gráfico de série e card de fontes complementares
+   (download automático vs. upload manual) — validado antes com a demo
+   interativa aprovada pelo usuário. ---- */
+.rsr-alerta-1 { background: rgba(46, 158, 117, .14); color: var(--mint); }
+.rsr-alerta-2 { background: rgba(217, 172, 44, .16); color: #B8860B; }
+.rsr-alerta-3 { background: rgba(255, 138, 101, .16); color: var(--coral); }
+.rsr-alerta-4 { background: rgba(217, 60, 60, .14); color: #D33C3C; }
+
+.rsr-chart-wrap { background: var(--bg-sunken); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.rsr-chart-titulo { font-size: 12px; font-weight: 600; color: var(--text-soft); margin-bottom: 10px; }
+.rsr-chart-svg text { font-family: var(--font-body); }
+
+.rsr-fonte-arquivo-lista { display: flex; flex-direction: column; gap: 10px; }
+.rsr-fonte-arquivo-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  background: var(--bg-sunken); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
+}
+.rsr-fonte-arquivo-info { min-width: 0; }
+.rsr-fonte-arquivo-nome { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+.rsr-fonte-arquivo-desc { font-size: 12px; color: var(--text-soft); }
+.rsr-fonte-arquivo-acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
+
 /* Mobile-first: menu lateral vira overlay, nunca empurra o conteudo. */
 @media (max-width: 860px) {
   .rsr-sidebar {

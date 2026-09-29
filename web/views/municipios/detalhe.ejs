@@ -11,6 +11,22 @@ const ROTULOS = {
   pib_mil_reais: 'PIB (mil reais)',
   pib_per_capita: 'PIB per capita (R$)',
   taxa_alfabetizacao: 'Taxa de alfabetização (%)',
+  // Busca única (2026-09-29): Siconfi (Finanças), InfoDengue (Saúde) e
+  // IDHM/Atlas Brasil (aparece em "Outras fontes", por ser arquivo_auto).
+  siconfi_receita_corrente_liquida: 'Receita corrente líquida',
+  siconfi_despesa_total: 'Despesa total realizada',
+  siconfi_pct_saude: '% investido em saúde',
+  siconfi_pct_educacao: '% investido em educação',
+  siconfi_divida_consolidada: 'Dívida consolidada líquida',
+  dengue_casos_semana: 'Casos de dengue (última semana)',
+  dengue_incidencia_100mil: 'Incidência de dengue (/100 mil hab.)',
+  dengue_nivel_alerta: 'Nível de alerta (dengue)',
+  idhm: 'IDHM',
+  idhm_educacao: 'IDHM — Educação',
+  idhm_longevidade: 'IDHM — Longevidade',
+  idhm_renda: 'IDHM — Renda',
+  escolarizacao_6a14: 'Escolarização 6-14 anos (%)',
+  fora_da_escola_6a14: 'Fora da escola 6-14 anos (%)',
 };
 function rotuloChave(chave) {
   return ROTULOS[chave] || chave;
@@ -45,7 +61,25 @@ const blocosComDados = BLOCOS
 // BLOCOS acima so cobrem as chaves que o IBGE publica pronto. Qualquer
 // chave que nao esteja em nenhum BLOCOS.chaves cai neste bloco genérico
 // "Outros dados públicos", agrupado por fonte.
-const chavesNosBlocosIbge = new Set(BLOCOS.flatMap((b) => b.chaves));
+// Busca única (2026-09-29): Finanças (Siconfi) e Saúde (InfoDengue)
+// ganham abas próprias, igual os blocos do IBGE — não caem no balaio
+// genérico de "Outras fontes" (por isso entram no mesmo conjunto de
+// exclusão abaixo). "dengue_serie_semanal" é tratado à parte (não é um
+// rsr-stat, é o gráfico).
+const CHAVES_FINANCAS = ['siconfi_receita_corrente_liquida', 'siconfi_despesa_total', 'siconfi_pct_saude', 'siconfi_pct_educacao', 'siconfi_divida_consolidada'];
+const CHAVES_SAUDE = ['dengue_casos_semana', 'dengue_incidencia_100mil', 'dengue_nivel_alerta'];
+const financas = CHAVES_FINANCAS.map((c) => dadosPorChave[c]).filter(Boolean);
+const saude = CHAVES_SAUDE.map((c) => dadosPorChave[c]).filter(Boolean);
+let serieDengueSemanal = [];
+if (dadosPorChave.dengue_serie_semanal && dadosPorChave.dengue_serie_semanal.valor_texto) {
+  try { serieDengueSemanal = JSON.parse(dadosPorChave.dengue_serie_semanal.valor_texto); } catch (e) { serieDengueSemanal = []; }
+}
+const chavesNosBlocosIbge = new Set([
+  ...BLOCOS.flatMap((b) => b.chaves),
+  ...CHAVES_FINANCAS,
+  ...CHAVES_SAUDE,
+  'dengue_serie_semanal',
+]);
 const outrosDados = dadosPublicos.filter((v) => !chavesNosBlocosIbge.has(v.chave));
 const outrosDadosPorFonte = {};
 outrosDados.forEach((v) => {
@@ -66,7 +100,7 @@ const geografia = CHAVES_GEOGRAFIA.map((c) => dadosPorChave[c]).filter(Boolean);
 // "Fontes e notas": todo valor público exibido nesta tela, IBGE ou não —
 // já carrega fonte + período + data de coleta (regra de arquitetura da
 // seção 4), só faltava uma tela mostrando isso ao usuário.
-const fontesENotas = [...geografia, ...blocosComDados.flatMap((b) => b.itens), ...outrosDados].map((v) => ({
+const fontesENotas = [...geografia, ...blocosComDados.flatMap((b) => b.itens), ...financas, ...saude, ...outrosDados].map((v) => ({
   rotulo: rotuloChave(v.chave),
   fonte: v.fonte_nome,
   periodo: v.periodo_referencia || '—',
@@ -80,6 +114,12 @@ function formatarData(v) {
   if (!v) return null;
   const d = v instanceof Date ? v : new Date(v);
   return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+}
+// Nível de alerta epidemiológico (InfoDengue: 1 verde .. 4 vermelho) —
+// cor por CSS (.rsr-alerta-1..4), texto já vem pronto em valor_texto.
+function classeAlerta(v) {
+  const n = v && v.valor_numerico;
+  return 'rsr-alerta-' + (n >= 1 && n <= 4 ? n : 0);
 }
 // Dias ate o fim do mandato — só para exibição aqui; o alerta automático
 // pelo sino (360/180/90/60/30/15 dias, para master + gestor de carteira)
@@ -110,6 +150,9 @@ if (municipio.mandato_fim) {
     <a class="rsr-btn rsr-btn-primario" style="padding:0 18px;display:inline-flex;align-items:center;text-decoration:none" href="/municipios/<%= municipio.id %>/indicadores/novo">+ Indicador</a>
   </div>
 </div>
+
+<% if (mensagem) { %><div class="rsr-sucesso" style="margin-bottom:16px"><%= mensagem %></div><% } %>
+<% if (erro) { %><div class="rsr-erro" style="margin-bottom:16px"><%= erro %></div><% } %>
 
 <% if (municipio.prefeito_nome || municipio.mandato_fim) { %>
 <div class="rsr-card">
@@ -152,8 +195,8 @@ if (municipio.mandato_fim) {
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
     <h2 style="margin:0;font-size:16px;font-family:var(--font-display)">Contexto do município</h2>
     <div style="display:flex;gap:8px">
-      <form method="POST" action="/municipios/<%= municipio.id %>/atualizar-dados-ibge">
-        <button class="rsr-btn rsr-btn-secundario" type="submit" <%= municipio.codigo_ibge ? '' : 'disabled' %>>Buscar agora (IBGE)</button>
+      <form method="POST" action="/municipios/<%= municipio.id %>/buscar-dados">
+        <button class="rsr-btn rsr-btn-secundario" type="submit" <%= municipio.codigo_ibge ? '' : 'disabled' %>>Buscar dados do município</button>
       </form>
       <form method="POST" action="/municipios/<%= municipio.id %>/congelar-linha-base" onsubmit="return confirm('Congelar a linha de base agora, com os dados públicos atuais?')">
         <button class="rsr-btn rsr-btn-secundario" type="submit" <%= dadosPublicos.length ? '' : 'disabled' %>>Congelar linha de base</button>
@@ -211,6 +254,12 @@ if (municipio.mandato_fim) {
           <% blocosComDados.forEach((bloco, i) => { %>
             <button type="button" class="rsr-aba-btn <%= i === 0 ? 'ativa' : '' %>" data-aba-alvo="<%= idAbas %>-<%= bloco.numero %>"><%= bloco.titulo %></button>
           <% }) %>
+          <% if (financas.length > 0) { %>
+            <button type="button" class="rsr-aba-btn" data-aba-alvo="<%= idAbas %>-financas">Finanças</button>
+          <% } %>
+          <% if (saude.length > 0 || serieDengueSemanal.length > 0) { %>
+            <button type="button" class="rsr-aba-btn" data-aba-alvo="<%= idAbas %>-saude">Saúde</button>
+          <% } %>
           <% if (Object.keys(outrosDadosPorFonte).length > 0) { %>
             <button type="button" class="rsr-aba-btn <%= blocosComDados.length === 0 ? 'ativa' : '' %>" data-aba-alvo="<%= idAbas %>-outras">Outras fontes</button>
           <% } %>
@@ -229,6 +278,67 @@ if (municipio.mandato_fim) {
             </div>
           </div>
         <% }) %>
+
+        <% if (financas.length > 0) { %>
+          <div class="rsr-aba-painel" id="<%= idAbas %>-financas">
+            <div class="rsr-stats-grid">
+              <% financas.forEach((v) => { %>
+                <div class="rsr-stat">
+                  <div class="rsr-stat-rotulo"><%= rotuloChave(v.chave) %></div>
+                  <div class="rsr-stat-valor"><%= formatarValor(v) %><% if (v.chave === 'siconfi_pct_saude' || v.chave === 'siconfi_pct_educacao') { %>%<% } %></div>
+                  <div class="rsr-stat-fonte"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
+
+        <% if (saude.length > 0 || serieDengueSemanal.length > 0) { %>
+          <div class="rsr-aba-painel" id="<%= idAbas %>-saude">
+            <% if (saude.length > 0) { %>
+              <div class="rsr-stats-grid" style="margin-bottom:14px">
+                <% saude.forEach((v) => { %>
+                  <div class="rsr-stat">
+                    <div class="rsr-stat-rotulo"><%= rotuloChave(v.chave) %></div>
+                    <% if (v.chave === 'dengue_nivel_alerta') { %>
+                      <div style="margin-top:2px"><span class="rsr-badge <%= classeAlerta(v) %>" style="font-size:13px;padding:5px 12px"><%= v.valor_texto || formatarValor(v) %></span></div>
+                    <% } else { %>
+                      <div class="rsr-stat-valor"><%= formatarValor(v) %></div>
+                    <% } %>
+                    <div class="rsr-stat-fonte"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
+                  </div>
+                <% }) %>
+              </div>
+            <% } %>
+            <% if (serieDengueSemanal.length > 1) { %>
+              <% const maxCasos = Math.max(...serieDengueSemanal.map((p) => p.casos), 1);
+                 const larguraUtil = 460, alturaUtil = 100, xIni = 30, yBase = 118;
+                 const pontosGrafico = serieDengueSemanal.map((p, i) => {
+                   const x = xIni + (serieDengueSemanal.length === 1 ? 0 : (i * larguraUtil) / (serieDengueSemanal.length - 1));
+                   const y = yBase - (p.casos / maxCasos) * alturaUtil;
+                   return { x, y, casos: p.casos, semana: p.semana };
+                 });
+                 const pontosStr = pontosGrafico.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+                 const ultimoPonto = pontosGrafico[pontosGrafico.length - 1];
+                 const picoPonto = pontosGrafico.reduce((max, p) => (p.casos > max.casos ? p : max), pontosGrafico[0]);
+              %>
+              <div class="rsr-chart-wrap">
+                <div class="rsr-chart-titulo">Casos de dengue por semana epidemiológica — últimas <%= serieDengueSemanal.length %> semanas</div>
+                <svg class="rsr-chart-svg" viewBox="0 0 560 140" width="100%" height="140" role="img"
+                     aria-label="Série de casos de dengue por semana epidemiológica, de 0 a <%= maxCasos %> casos, pico de <%= picoPonto.casos %> na semana <%= picoPonto.semana %>">
+                  <line x1="8" y1="18" x2="540" y2="18" stroke="var(--border)" stroke-width="1"/>
+                  <line x1="8" y1="118" x2="540" y2="118" stroke="var(--border)" stroke-width="1"/>
+                  <text x="10" y="14" font-size="10" fill="var(--text-soft)"><%= maxCasos %></text>
+                  <text x="10" y="116" font-size="10" fill="var(--text-soft)">0</text>
+                  <polyline fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="<%= pontosStr %>" />
+                  <circle cx="<%= ultimoPonto.x.toFixed(1) %>" cy="<%= ultimoPonto.y.toFixed(1) %>" r="4" fill="var(--accent)" />
+                  <text x="<%= (ultimoPonto.x + 6).toFixed(1) %>" y="<%= (ultimoPonto.y - 3).toFixed(1) %>" font-size="11" font-weight="700" fill="var(--text)"><%= ultimoPonto.casos %> casos</text>
+                  <text x="<%= picoPonto.x.toFixed(1) %>" y="10" font-size="10" fill="var(--text-soft)" text-anchor="middle">pico: <%= picoPonto.casos %> (SE <%= picoPonto.semana %>)</text>
+                </svg>
+              </div>
+            <% } %>
+          </div>
+        <% } %>
 
         <% if (Object.keys(outrosDadosPorFonte).length > 0) { %>
           <div class="rsr-aba-painel <%= blocosComDados.length === 0 ? 'ativa' : '' %>" id="<%= idAbas %>-outras">
@@ -296,6 +406,34 @@ if (municipio.mandato_fim) {
     </p>
   <% } %>
 </div>
+
+<% if (municipio.codigo_ibge) { %>
+<div class="rsr-card">
+  <div class="rsr-secao-titulo">Fontes complementares (arquivo)</div>
+  <div class="rsr-fonte-arquivo-lista">
+    <div class="rsr-fonte-arquivo-item">
+      <div class="rsr-fonte-arquivo-info">
+        <div class="rsr-fonte-arquivo-nome">IDHM — Atlas do Desenvolvimento Humano (PNUD)</div>
+        <div class="rsr-fonte-arquivo-desc">Baixado automaticamente do portal oficial · atualiza a cada Censo (dado mais recente: 2010)</div>
+      </div>
+      <div class="rsr-fonte-arquivo-acoes">
+        <% if (dadosPorChave.idhm) { %>
+          <span class="rsr-badge rsr-badge-mint">Importado · <%= dadosPorChave.idhm.periodo_referencia %></span>
+        <% } else { %>
+          <span class="rsr-badge rsr-badge-neutro">Nunca importado</span>
+        <% } %>
+        <form method="POST" action="/municipios/<%= municipio.id %>/buscar-idhm">
+          <button class="rsr-btn rsr-btn-secundario" type="submit" style="height:38px;padding:0 14px;font-size:13px">Baixar e importar automaticamente</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12px;color:var(--text-soft);margin:14px 0 0">
+    SIOPS, CNES e DATASUS continuam manuais (sem endereço de arquivo estável conhecido) — disponíveis na
+    <a href="/central-atualizacoes">Central de Atualizações</a>.
+  </p>
+</div>
+<% } %>
 
 <div class="rsr-card">
   <h2 style="margin:0 0 14px;font-size:16px;font-family:var(--font-display)">Catálogo de indicadores</h2>

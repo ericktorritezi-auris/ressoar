@@ -56,17 +56,52 @@ router.get('/central-atualizacoes', exigirMaster, async (req, res) => {
   });
 });
 
-router.post('/central-atualizacoes/:municipioId/ibge', exigirMaster, async (req, res) => {
+// Fontes "api" (busca ao vivo, um clique) — antes só o IBGE tinha essa
+// rota (hardcoded); agora Siconfi e InfoDengue entraram no mesmo padrão
+// (secao 4 do mapeamento, 2026-09-29), daí o dispatcher por codigo.
+const BUSCADORES_API = {
+  ibge_sidra: async (tenant, municipio) => {
+    await dadosPublicosServico.buscarEArmazenarDadosIbge(tenant, municipio.id, municipio.codigo_ibge);
+    await dadosPublicosServico.garantirMapaMunicipio(tenant, municipio.id, municipio.codigo_ibge);
+  },
+  siconfi: (tenant, municipio) => dadosPublicosServico.buscarEArmazenarSiconfi(tenant, municipio.id, municipio.codigo_ibge),
+  infodengue: (tenant, municipio) => dadosPublicosServico.buscarEArmazenarInfoDengue(tenant, municipio.id, municipio.codigo_ibge),
+};
+
+router.post('/central-atualizacoes/:municipioId/buscar/:codigoFonte', exigirMaster, async (req, res) => {
+  const municipio = await municipiosRepo.buscarPorId(req.tenant, req.params.municipioId);
+  if (!municipio || !municipio.codigo_ibge) {
+    return res.redirect('/central-atualizacoes?erro=Município sem código IBGE.');
+  }
+  const buscador = BUSCADORES_API[req.params.codigoFonte];
+  if (!buscador) {
+    return res.redirect('/central-atualizacoes?erro=Fonte desconhecida.');
+  }
+  try {
+    await buscador(req.tenant, municipio);
+    res.redirect(`/central-atualizacoes?msg=Dados atualizados para ${encodeURIComponent(municipio.nome)}.`);
+  } catch (erro) {
+    console.error('[central-atualizacoes] erro ao buscar fonte api', req.params.codigoFonte, erro);
+    res.redirect('/central-atualizacoes?erro=Não foi possível buscar os dados agora. Tente novamente mais tarde.');
+  }
+});
+
+// Fonte "arquivo_auto" (IDHM/Atlas Brasil): baixa e importa sozinha, sem
+// upload manual — mesmo botão de um clique das fontes "api", mas o
+// download é pesado (arquivo nacional), então fica em rota própria.
+router.post('/central-atualizacoes/:municipioId/auto/idhm_atlas', exigirMaster, async (req, res) => {
   const municipio = await municipiosRepo.buscarPorId(req.tenant, req.params.municipioId);
   if (!municipio || !municipio.codigo_ibge) {
     return res.redirect('/central-atualizacoes?erro=Município sem código IBGE.');
   }
   try {
-    await dadosPublicosServico.buscarEArmazenarDadosIbge(req.tenant, municipio.id, municipio.codigo_ibge);
-    res.redirect(`/central-atualizacoes?msg=Dados do IBGE atualizados para ${encodeURIComponent(municipio.nome)}.`);
+    const valores = await dadosPublicosServico.buscarEArmazenarIdhm(req.tenant, municipio.id, municipio.codigo_ibge);
+    res.redirect(valores.length > 0
+      ? `/central-atualizacoes?msg=IDHM importado para ${encodeURIComponent(municipio.nome)}.`
+      : `/central-atualizacoes?erro=Município não encontrado no arquivo do IDHM.`);
   } catch (erro) {
-    console.error('[central-atualizacoes] erro ao buscar IBGE', erro);
-    res.redirect('/central-atualizacoes?erro=Não foi possível buscar os dados do IBGE agora. Tente novamente mais tarde.');
+    console.error('[central-atualizacoes] erro ao importar IDHM', erro);
+    res.redirect('/central-atualizacoes?erro=Não foi possível baixar/importar o IDHM agora.');
   }
 });
 
