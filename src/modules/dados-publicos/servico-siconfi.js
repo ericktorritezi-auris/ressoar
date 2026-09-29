@@ -15,11 +15,11 @@
 // as chamadas voltando 404 — nao era so o numero do anexo, era a URL
 // BASE inteira que estava errada.
 //
-// Rodada 3 (esta): consegui, via WebFetch, alcancar de fato a API real
-// (algo que curl/fetch direto desta sandbox nao conseguem — bloqueio de
-// rede so no /agent-proxy usado por eles) e confirmei contra um municipio
-// real (Sao Paulo, 3550308, RREO 2024/6º bimestre, RGF 2024/3º
-// quadrimestre) três coisas importantes:
+// Rodada 3: consegui, via WebFetch, alcancar de fato a API real (algo que
+// curl/fetch direto desta sandbox nao conseguem — bloqueio de rede so no
+// /agent-proxy usado por eles) e confirmei contra um municipio real (Sao
+// Paulo, 3550308, RREO 2024/6º bimestre, RGF 2024/3º quadrimestre) três
+// coisas importantes:
 //
 //   1) A URL base certa e' .../ords/siconfi/tt/ — no' de Oracle REST Data
 //      Services (ORDS) — NUNCA foi .../api/. Esse "/api/" usado nas duas
@@ -53,6 +53,32 @@
 //   RGF-Anexo  02 → cod_conta "DividaConsolidadaLiquida"
 //                    (conta "DÍVIDA CONSOLIDADA LÍQUIDA (DCL) (III) = (I - II)",
 //                     coluna "Até o Xº Quadrimestre", X = o quadrimestre pedido)
+//
+// Rodada 4 (2026-09-29, mesmo dia — usuário testou de novo em staging com
+// um município pequeno de verdade, São Sebastião da Amoreira/PR, 8.063
+// hab.): tela voltou "nenhum valor encontrado" de novo, mas SEM nenhum
+// log de erro — nem 404, nem "cod_conta não encontrado". Ou seja, a API
+// respondia 200 com items:[] em TODOS os períodos tentados, sem nunca
+// lançar exceção — por isso nada aparecia no log (meu código só loga em
+// caso de erro OU de resposta não-vazia sem o padrão esperado; resposta
+// vazia "de verdade" é silenciosa, igual a "esse período não foi
+// declarado ainda", o que é normal).
+//
+// Investigando direto contra o endpoint extrato_entregas (mostra o que o
+// ente realmente declarou), achei a causa: pela Lei de Responsabilidade
+// Fiscal, município com população abaixo de 50 mil habitantes entrega um
+// relatório DIFERENTE — "RREO Simplificado" / "RGF Simplificado" — em vez
+// do "RREO"/"RGF" normal usado pelas grandes cidades (que foi o único
+// testado até agora, com São Paulo). Os nomes dos anexos e cod_conta são
+// os mesmos nos dois formatos (confirmado contra este município real:
+// RREO-Anexo 01, cod_conta "DespesasExcetoIntraOrcamentarias", coluna
+// "DESPESAS EMPENHADAS ATÉ O BIMESTRE (f)" — tudo igual ao de São Paulo),
+// só o `co_tipo_demonstrativo` muda. Por isso agora cada tentativa testa
+// os dois tipos (normal, depois Simplificado) antes de passar pro
+// próximo período. Para o RGF Simplificado especificamente, a
+// periodicidade declarada também é diferente: "S" (semestral, só 1-2
+// declarações/ano) em vez de "Q" (quadrimestral) — daí a tentativa extra
+// dedicada a esse formato em `buscarRgfAnexo`.
 
 const BASE = 'https://apidatalake.tesouro.gov.br/ords/siconfi/tt';
 
@@ -133,22 +159,32 @@ function periodosRgf(tentativas = 2) {
   return lista;
 }
 
+// Municípios grandes declaram "RREO"/"RGF"; municípios com menos de 50 mil
+// habitantes declaram "RREO Simplificado"/"RGF Simplificado" (LRF) — os
+// nomes de anexo e cod_conta são os mesmos nos dois formatos, só esse
+// parâmetro muda. Como não vale a pena manter uma lista de população por
+// município só pra escolher o tipo certo de antemão, tentamos os dois.
+const TIPOS_RREO = ['RREO', 'RREO Simplificado'];
+const TIPOS_RGF = ['RGF', 'RGF Simplificado'];
+
 async function buscarRreoAnexo(codigoIbge, noAnexo) {
   for (const { ano, bimestre } of periodosRreo()) {
-    const params = new URLSearchParams({
-      an_exercicio: String(ano),
-      nr_periodo: String(bimestre),
-      co_tipo_demonstrativo: 'RREO',
-      no_anexo: noAnexo,
-      id_ente: codigoIbge,
-    });
-    try {
-      const linhas = await buscarJson(`${BASE}/rreo?${params.toString()}`);
-      if (linhas.length > 0) {
-        return { linhas, periodo: `RREO ${ano}, ${bimestre}º bimestre` };
+    for (const tipo of TIPOS_RREO) {
+      const params = new URLSearchParams({
+        an_exercicio: String(ano),
+        nr_periodo: String(bimestre),
+        co_tipo_demonstrativo: tipo,
+        no_anexo: noAnexo,
+        id_ente: codigoIbge,
+      });
+      try {
+        const linhas = await buscarJson(`${BASE}/rreo?${params.toString()}`);
+        if (linhas.length > 0) {
+          return { linhas, periodo: `${tipo} ${ano}, ${bimestre}º bimestre` };
+        }
+      } catch (erro) {
+        console.warn(`[siconfi] falha ao buscar ${noAnexo} (${tipo})`, codigoIbge, ano, bimestre, erro.message);
       }
-    } catch (erro) {
-      console.warn(`[siconfi] falha ao buscar ${noAnexo}`, codigoIbge, ano, bimestre, erro.message);
     }
   }
   return { linhas: [], periodo: null };
@@ -174,6 +210,33 @@ async function buscarRgfAnexo(codigoIbge, noAnexo) {
       console.warn(`[siconfi] falha ao buscar ${noAnexo}`, codigoIbge, ano, quadrimestre, erro.message);
     }
   }
+
+  // Fallback pro formato "Simplificado" (municípios < 50 mil hab.):
+  // periodicidade "S" (semestral), no máximo 2 declarações/ano — tenta o
+  // ano atual e o anterior, período 1 e 2 de cada.
+  const anoAtual = new Date().getUTCFullYear();
+  for (const ano of [anoAtual, anoAtual - 1]) {
+    for (const periodo of [1, 2]) {
+      const params = new URLSearchParams({
+        an_exercicio: String(ano),
+        in_periodicidade: 'S',
+        nr_periodo: String(periodo),
+        co_tipo_demonstrativo: 'RGF Simplificado',
+        no_anexo: noAnexo,
+        co_poder: 'E',
+        id_ente: codigoIbge,
+      });
+      try {
+        const linhas = await buscarJson(`${BASE}/rgf?${params.toString()}`);
+        if (linhas.length > 0) {
+          return { linhas, periodo: `RGF Simplificado ${ano}, ${periodo}º semestre`, quadrimestre: null, semestre: periodo };
+        }
+      } catch (erro) {
+        console.warn(`[siconfi] falha ao buscar ${noAnexo} (RGF Simplificado)`, codigoIbge, ano, periodo, erro.message);
+      }
+    }
+  }
+
   return { linhas: [], periodo: null, quadrimestre: null };
 }
 
@@ -210,11 +273,20 @@ async function buscarDadosFinanceiros(codigoIbge) {
   // arquivo (esses demonstrativos vão para SIOPS/SIOPE, sistemas
   // separados). Removidos desta integração em 2026-09-29.
 
-  const colunaDivida = divida.quadrimestre ? `Até o ${divida.quadrimestre}º Quadrimestre` : 'Quadrimestre';
+  // Município grande (quadrimestral) usa "Até o Xº Quadrimestre"; município
+  // pequeno no formato Simplificado (semestral) usa "Até o Xº Semestre" —
+  // 'Até o' sozinho no final pega qualquer um dos dois formatos como
+  // último recurso (a resposta só tem uma linha "Até o..." por período
+  // pedido, então não corre risco de pegar o período errado).
+  const padroesColunaDivida = [
+    divida.quadrimestre ? `Até o ${divida.quadrimestre}º Quadrimestre` : null,
+    divida.semestre ? `Até o ${divida.semestre}º Semestre` : null,
+    'Até o',
+  ].filter(Boolean);
   const dividaConsolidada = acharValorPorCodConta(
     divida.linhas,
     'DividaConsolidadaLiquida',
-    [colunaDivida, 'Quadrimestre'],
+    padroesColunaDivida,
     'RGF-Anexo 02 / dívida consolidada'
   );
   if (dividaConsolidada !== null) {
