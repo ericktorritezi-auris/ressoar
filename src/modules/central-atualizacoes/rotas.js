@@ -78,7 +78,20 @@ router.post('/central-atualizacoes/:municipioId/buscar/:codigoFonte', exigirMast
     return res.redirect('/central-atualizacoes?erro=Fonte desconhecida.');
   }
   try {
-    await buscador(req.tenant, municipio);
+    // Bug encontrado em 2026-09-29 (relatado pelo usuário em staging): o
+    // redirect de sucesso disparava sempre que `buscador` não lançava
+    // exceção, sem checar se algo foi de fato encontrado e salvo — então
+    // uma fonte que respondeu "0 valores" (ex.: Siconfi sem os padrões
+    // esperados na resposta) aparecia como "Dados atualizados" mesmo
+    // continuando com "nunca coletado" na tela do município.
+    const valores = await buscador(req.tenant, municipio);
+    const quantidade = Array.isArray(valores) ? valores.length : null;
+    if (quantidade === 0) {
+      res.redirect(`/central-atualizacoes?erro=${encodeURIComponent(
+        `A consulta a ${req.params.codigoFonte} respondeu, mas nenhum valor esperado foi encontrado para ${municipio.nome}. Veja os logs do servidor (linhas "[siconfi] anexo sem padrão esperado" ou similares) para o texto exato recebido.`
+      )}`);
+      return;
+    }
     res.redirect(`/central-atualizacoes?msg=Dados atualizados para ${encodeURIComponent(municipio.nome)}.`);
   } catch (erro) {
     console.error('[central-atualizacoes] erro ao buscar fonte api', req.params.codigoFonte, erro);
