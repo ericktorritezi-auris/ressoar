@@ -7,6 +7,23 @@ const repo = require('./repositorio');
 const servicoIbge = require('./servico-ibge');
 const municipiosRepo = require('../municipios/repositorio');
 
+// Painel de Localização (novo UX, 2026-09-29): busca o mapa (SVG) do
+// IBGE só UMA vez por município — o contorno geográfico não muda com a
+// atualização periódica de dados públicos, então não faz sentido
+// refazer essa chamada toda vez que "Buscar agora" roda. `forcar: true`
+// (botão manual "Regenerar mapa") ignora essa checagem, para o caso raro
+// de uma redefinição de limites municipais.
+async function garantirMapaMunicipio(tenant, municipioId, codigoIbge, { forcar = false } = {}) {
+  if (!forcar) {
+    const municipio = await municipiosRepo.buscarPorId(tenant, municipioId);
+    if (municipio && municipio.mapa_svg) return false;
+  }
+  const svg = await servicoIbge.buscarMalhaSvg(codigoIbge);
+  if (!svg) return false;
+  await municipiosRepo.atualizarMapa(tenant, municipioId, svg);
+  return true;
+}
+
 async function buscarEArmazenarDadosIbge(tenant, municipioId, codigoIbge) {
   const fonteIbge = await repo.buscarFontePorCodigo('ibge_sidra');
   if (!fonteIbge) return [];
@@ -91,4 +108,4 @@ async function importarArquivo(codigoIbge, codigoFonte, conteudoCsv) {
   return valores.length;
 }
 
-module.exports = { buscarEArmazenarDadosIbge, importarArquivo, interpretarCsv };
+module.exports = { buscarEArmazenarDadosIbge, garantirMapaMunicipio, importarArquivo, interpretarCsv };

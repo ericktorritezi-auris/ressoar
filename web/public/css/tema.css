@@ -344,6 +344,166 @@ a { color: var(--accent); }
   margin-top: 6px;
 }
 
+/* ---- Novo UX do Contexto do município (2026-09-29): faixa de KPIs,
+   painel de Localização (mapa + geografia) e abas em vez de blocos
+   sempre-abertos — ver demo validada com o usuário e seção 4 do
+   mapeamento. ---- */
+.rsr-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.rsr-kpi {
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  min-width: 0;
+}
+
+.rsr-kpi-rotulo {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-soft);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rsr-kpi-valor {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.rsr-kpi-periodo {
+  font-size: 10px;
+  color: var(--text-soft);
+  margin-top: 3px;
+}
+
+.rsr-contexto-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.rsr-localizacao {
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.rsr-mapa-frame {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.rsr-mapa-frame svg { width: 100%; height: auto; display: block; }
+
+.rsr-mapa-vazio {
+  font-size: 12px;
+  color: var(--text-soft);
+  text-align: center;
+  padding: 28px 8px;
+}
+
+.rsr-geografia-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.rsr-geografia-linha:last-child { border-bottom: none; }
+.rsr-geografia-linha span:first-child { color: var(--text-soft); }
+.rsr-geografia-linha span:last-child { font-weight: 600; text-align: right; }
+
+.rsr-abas {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.rsr-aba-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 10px 14px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.rsr-aba-btn.ativa { color: var(--accent); border-bottom-color: var(--accent); }
+.rsr-aba-painel { display: none; }
+.rsr-aba-painel.ativa { display: block; }
+
+.rsr-fontes-notas {
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+}
+
+.rsr-fontes-notas summary {
+  cursor: pointer;
+  padding: 12px 4px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  list-style: none;
+}
+
+.rsr-fontes-notas summary::-webkit-details-marker { display: none; }
+
+.rsr-fontes-notas summary::after {
+  content: '▾';
+  float: right;
+  color: var(--text-soft);
+  font-family: var(--font-body);
+}
+
+.rsr-fontes-notas[open] summary::after { content: '▴'; }
+
+.rsr-fontes-linha {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.7fr;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  align-items: center;
+}
+
+.rsr-fontes-linha:last-child { border-bottom: none; }
+.rsr-fontes-linha .rsr-fontes-chave { font-weight: 600; }
+.rsr-fontes-linha .rsr-fontes-meta { color: var(--text-soft); }
+
+@media (max-width: 860px) {
+  .rsr-contexto-grid { grid-template-columns: 1fr; }
+  .rsr-fontes-linha { grid-template-columns: 1fr; gap: 2px; }
+}
+
 /* Mobile-first: menu lateral vira overlay, nunca empurra o conteudo. */
 @media (max-width: 860px) {
   .rsr-sidebar {
