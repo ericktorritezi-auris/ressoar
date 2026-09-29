@@ -5,6 +5,9 @@
 
 const repo = require('./repositorio');
 const servicoIbge = require('./servico-ibge');
+const servicoSiconfi = require('./servico-siconfi');
+const servicoInfoDengue = require('./servico-infodengue');
+const servicoIdhm = require('./servico-idhm');
 const municipiosRepo = require('../municipios/repositorio');
 
 // Painel de Localização (novo UX, 2026-09-29): busca o mapa (SVG) do
@@ -39,6 +42,63 @@ async function buscarEArmazenarDadosIbge(tenant, municipioId, codigoIbge) {
   }
 
   return valores;
+}
+
+// Siconfi (Tesouro Nacional) — fonte "api" nova da busca unica
+// (2026-09-29, secao 4 do mapeamento). Mesmo padrao das demais: nunca
+// lanca pra fora, "sem fonte cadastrada" ou "sem valores" apenas
+// devolvem lista vazia.
+async function buscarEArmazenarSiconfi(tenant, municipioId, codigoIbge) {
+  const fonte = await repo.buscarFontePorCodigo('siconfi');
+  if (!fonte) return [];
+  const valores = await servicoSiconfi.buscarDadosFinanceiros(codigoIbge);
+  if (valores.length === 0) return [];
+  await repo.salvarValores(codigoIbge, fonte.id, valores);
+  return valores;
+}
+
+// InfoDengue (Fiocruz/UFMG) — fonte "api" nova da busca unica.
+async function buscarEArmazenarInfoDengue(tenant, municipioId, codigoIbge) {
+  const fonte = await repo.buscarFontePorCodigo('infodengue');
+  if (!fonte) return [];
+  const valores = await servicoInfoDengue.buscarDadosSaude(codigoIbge);
+  if (valores.length === 0) return [];
+  await repo.salvarValores(codigoIbge, fonte.id, valores);
+  return valores;
+}
+
+// IDHM/Atlas Brasil — fonte "arquivo_auto": baixa (~27MB, arquivo
+// nacional) e importa o municipio pedido, acionado por um botao manual
+// dedicado (nao entra na busca unica automatica por ser um download
+// pesado) — ver central-atualizacoes e municipios/rotas.js.
+async function buscarEArmazenarIdhm(tenant, municipioId, codigoIbge) {
+  const fonte = await repo.buscarFontePorCodigo('idhm_atlas');
+  if (!fonte || !fonte.arquivo_url) return [];
+  const valores = await servicoIdhm.buscarIdhm(fonte.arquivo_url, codigoIbge);
+  if (valores.length === 0) return [];
+  await repo.salvarValores(codigoIbge, fonte.id, valores);
+  return valores;
+}
+
+// Busca unica de dados municipais (2026-09-29, pedido do usuario: "um
+// botao só, busca tudo que vem de API"). Dispara IBGE (dados+mapa),
+// Siconfi e InfoDengue em paralelo — cada chamada ja e' defensiva por
+// conta propria (nunca lanca), entao um Promise.allSettled aqui seria
+// redundante; Promise.all basta porque nenhuma das quatro promessas
+// rejeita. IDHM fica de fora por ser um download pesado sob demanda, não
+// parte da atualização de rotina.
+async function buscarTudo(tenant, municipioId, codigoIbge) {
+  const [ibge, siconfi, infoDengue] = await Promise.all([
+    buscarEArmazenarDadosIbge(tenant, municipioId, codigoIbge),
+    buscarEArmazenarSiconfi(tenant, municipioId, codigoIbge),
+    buscarEArmazenarInfoDengue(tenant, municipioId, codigoIbge),
+  ]);
+  await garantirMapaMunicipio(tenant, municipioId, codigoIbge);
+  return {
+    ibge: ibge.length,
+    siconfi: siconfi.length,
+    infoDengue: infoDengue.length,
+  };
 }
 
 /**
@@ -108,4 +168,13 @@ async function importarArquivo(codigoIbge, codigoFonte, conteudoCsv) {
   return valores.length;
 }
 
-module.exports = { buscarEArmazenarDadosIbge, garantirMapaMunicipio, importarArquivo, interpretarCsv };
+module.exports = {
+  buscarEArmazenarDadosIbge,
+  garantirMapaMunicipio,
+  buscarEArmazenarSiconfi,
+  buscarEArmazenarInfoDengue,
+  buscarEArmazenarIdhm,
+  buscarTudo,
+  importarArquivo,
+  interpretarCsv,
+};

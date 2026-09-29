@@ -8,14 +8,14 @@ const { pool } = require('../../config/db');
 
 async function listarFontes() {
   const { rows } = await pool.query(
-    'SELECT id, codigo, nome, dado_trazido, integracao, ordem FROM fontes_dados_publicos ORDER BY ordem'
+    'SELECT id, codigo, nome, dado_trazido, integracao, ordem, arquivo_url FROM fontes_dados_publicos ORDER BY ordem'
   );
   return rows;
 }
 
 async function buscarFontePorCodigo(codigo) {
   const { rows } = await pool.query(
-    'SELECT id, codigo, nome, dado_trazido, integracao FROM fontes_dados_publicos WHERE codigo = $1',
+    'SELECT id, codigo, nome, dado_trazido, integracao, arquivo_url FROM fontes_dados_publicos WHERE codigo = $1',
     [codigo]
   );
   return rows[0] || null;

@@ -124,18 +124,14 @@ router.post('/municipios', exigirMaster, upload.single('brasao_arquivo'), async 
     });
 
     if (codigoIbge) {
+      // Busca única (2026-09-29, secao 4 do mapeamento): um só disparo em
+      // segundo plano cobre IBGE (dados+mapa), Siconfi e InfoDengue — o
+      // master não precisa saber quais fontes existem, só que o cadastro
+      // vem com dados públicos já preenchidos quando ele abrir a tela.
       dadosPublicosServico
-        .buscarEArmazenarDadosIbge(req.tenant, municipioId, codigoIbge.trim())
+        .buscarTudo(req.tenant, municipioId, codigoIbge.trim())
         .catch((erro) => {
-          console.error('[municipios] falha ao buscar dados publicos em segundo plano', erro);
-        });
-      // Mapa do painel de Localização: gerado uma única vez aqui, no
-      // cadastro (novo UX, secao 4 do mapeamento) — nunca de novo no
-      // "Buscar agora" periodico, so no botao manual de regenerar.
-      dadosPublicosServico
-        .garantirMapaMunicipio(req.tenant, municipioId, codigoIbge.trim())
-        .catch((erro) => {
-          console.error('[municipios] falha ao buscar mapa em segundo plano', erro);
+          console.error('[municipios] falha ao buscar dados públicos em segundo plano', erro);
         });
     }
 
@@ -174,6 +170,8 @@ router.get('/municipios/:id', exigirMaster, async (req, res) => {
     indicadores,
     eixos,
     snapshot,
+    mensagem: req.query.msg || null,
+    erro: req.query.erro || null,
   });
 });
 
@@ -216,19 +214,51 @@ router.post('/municipios/:id', exigirMaster, upload.single('brasao_arquivo'), as
   res.redirect(`/municipios/${req.params.id}`);
 });
 
-// Botão "Buscar agora" da IBGE, chamado tanto no cadastro quanto na
-// Central de Atualizações (secao 4 — "importação de um clique").
+// Botão único "Buscar dados do município" (busca única, 2026-09-29,
+// secao 4 do mapeamento — pedido do usuário: "um botão só, busca tudo
+// que vem de API"). Substitui o antigo botão "Buscar agora (IBGE)":
+// agora dispara IBGE (dados+mapa), Siconfi e InfoDengue de uma vez.
+// Rota antiga (/atualizar-dados-ibge) mantida como alias — outros pontos
+// do sistema (ex.: e-mails/links antigos) podem apontar pra ela.
+router.post('/municipios/:id/buscar-dados', exigirMaster, async (req, res) => {
+  const municipio = await repo.buscarPorId(req.tenant, req.params.id);
+  if (!municipio || !municipio.codigo_ibge) {
+    return res.status(400).send('Município sem código IBGE cadastrado.');
+  }
+  const resultado = await dadosPublicosServico.buscarTudo(req.tenant, municipio.id, municipio.codigo_ibge);
+  const fontesComDado = Object.entries(resultado).filter(([, qtd]) => qtd > 0).map(([f]) => f);
+  const msg = fontesComDado.length > 0
+    ? `Dados atualizados: ${fontesComDado.join(', ')}.`
+    : 'Busca concluída, mas nenhuma fonte retornou dados novos agora.';
+  res.redirect(`/municipios/${req.params.id}?msg=${encodeURIComponent(msg)}`);
+});
 router.post('/municipios/:id/atualizar-dados-ibge', exigirMaster, async (req, res) => {
   const municipio = await repo.buscarPorId(req.tenant, req.params.id);
   if (!municipio || !municipio.codigo_ibge) {
     return res.status(400).send('Município sem código IBGE cadastrado.');
   }
-  await dadosPublicosServico.buscarEArmazenarDadosIbge(req.tenant, municipio.id, municipio.codigo_ibge);
-  // So preenche o mapa se ainda nao tiver (municipio cadastrado antes
-  // desta funcionalidade existir) — nunca regenera aqui, so no cadastro
-  // ou no botao manual (ver comentario em garantirMapaMunicipio).
-  await dadosPublicosServico.garantirMapaMunicipio(req.tenant, municipio.id, municipio.codigo_ibge);
+  await dadosPublicosServico.buscarTudo(req.tenant, municipio.id, municipio.codigo_ibge);
   res.redirect(`/municipios/${req.params.id}`);
+});
+
+// IDHM/Atlas Brasil — fonte "arquivo_auto": download pesado (arquivo
+// nacional), por isso fica num botão manual separado da busca única
+// automática, e não faz parte de buscarTudo.
+router.post('/municipios/:id/buscar-idhm', exigirMaster, async (req, res) => {
+  const municipio = await repo.buscarPorId(req.tenant, req.params.id);
+  if (!municipio || !municipio.codigo_ibge) {
+    return res.status(400).send('Município sem código IBGE cadastrado.');
+  }
+  try {
+    const valores = await dadosPublicosServico.buscarEArmazenarIdhm(req.tenant, municipio.id, municipio.codigo_ibge);
+    const msg = valores.length > 0
+      ? 'IDHM importado com sucesso.'
+      : 'Não foi possível encontrar este município no arquivo do IDHM agora.';
+    res.redirect(`/municipios/${req.params.id}?msg=${encodeURIComponent(msg)}`);
+  } catch (erro) {
+    console.error('[municipios] falha ao importar IDHM', erro);
+    res.redirect(`/municipios/${req.params.id}?erro=${encodeURIComponent('Não foi possível baixar/importar o IDHM agora.')}`);
+  }
 });
 
 // Botão manual "Regenerar mapa" — caso raro de redefinição de limites
