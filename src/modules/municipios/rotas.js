@@ -129,6 +129,14 @@ router.post('/municipios', exigirMaster, upload.single('brasao_arquivo'), async 
         .catch((erro) => {
           console.error('[municipios] falha ao buscar dados publicos em segundo plano', erro);
         });
+      // Mapa do painel de Localização: gerado uma única vez aqui, no
+      // cadastro (novo UX, secao 4 do mapeamento) — nunca de novo no
+      // "Buscar agora" periodico, so no botao manual de regenerar.
+      dadosPublicosServico
+        .garantirMapaMunicipio(req.tenant, municipioId, codigoIbge.trim())
+        .catch((erro) => {
+          console.error('[municipios] falha ao buscar mapa em segundo plano', erro);
+        });
     }
 
     res.redirect(`/municipios/${municipioId}`);
@@ -216,6 +224,22 @@ router.post('/municipios/:id/atualizar-dados-ibge', exigirMaster, async (req, re
     return res.status(400).send('Município sem código IBGE cadastrado.');
   }
   await dadosPublicosServico.buscarEArmazenarDadosIbge(req.tenant, municipio.id, municipio.codigo_ibge);
+  // So preenche o mapa se ainda nao tiver (municipio cadastrado antes
+  // desta funcionalidade existir) — nunca regenera aqui, so no cadastro
+  // ou no botao manual (ver comentario em garantirMapaMunicipio).
+  await dadosPublicosServico.garantirMapaMunicipio(req.tenant, municipio.id, municipio.codigo_ibge);
+  res.redirect(`/municipios/${req.params.id}`);
+});
+
+// Botão manual "Regenerar mapa" — caso raro de redefinição de limites
+// municipais (secao 4 do mapeamento, novo UX). Sempre busca de novo,
+// ignorando o cache em municipios.mapa_svg.
+router.post('/municipios/:id/mapa/regenerar', exigirMaster, async (req, res) => {
+  const municipio = await repo.buscarPorId(req.tenant, req.params.id);
+  if (!municipio || !municipio.codigo_ibge) {
+    return res.status(400).send('Município sem código IBGE cadastrado.');
+  }
+  await dadosPublicosServico.garantirMapaMunicipio(req.tenant, municipio.id, municipio.codigo_ibge, { forcar: true });
   res.redirect(`/municipios/${req.params.id}`);
 });
 

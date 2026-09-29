@@ -28,7 +28,7 @@ async function buscarPorId(tenant, id) {
       `SELECT id, codigo_ibge, nome, uf, populacao, brasao_url,
               contrato_inicio, contrato_vigencia, gestor_carteira_id,
               prefeito_nome, prefeito_partido, mandato_inicio, mandato_fim,
-              eh_municipio_teste, criado_em
+              eh_municipio_teste, criado_em, mapa_svg, mapa_atualizado_em
          FROM municipios
         WHERE id = $1`,
       [id]
@@ -95,6 +95,14 @@ async function atualizar(tenant, id, dados) {
 async function atualizarPopulacao(tenant, id, populacao) {
   return withTenantContext(contextoDe(tenant), (client) =>
     client.query('UPDATE municipios SET populacao = $1 WHERE id = $2', [populacao, id])
+  );
+}
+
+// Painel de Localização (seção 4 do mapeamento, novo UX 2026-09-29):
+// guarda o SVG do contorno do município, buscado uma única vez do IBGE.
+async function atualizarMapa(tenant, id, svgTexto) {
+  return withTenantContext(contextoDe(tenant), (client) =>
+    client.query('UPDATE municipios SET mapa_svg = $1, mapa_atualizado_em = now() WHERE id = $2', [svgTexto, id])
   );
 }
 
@@ -176,6 +184,7 @@ module.exports = {
   criar,
   atualizar,
   atualizarPopulacao,
+  atualizarMapa,
   listarGestoresCarteira,
   definirCarteiraDoGestor,
   salvarSnapshotLinhaBase,

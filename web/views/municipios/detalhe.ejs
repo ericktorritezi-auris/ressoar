@@ -24,8 +24,12 @@ function formatarValor(v) {
 // fora e por quê: piramide etaria/sexo/cor-raça/religião, salário médio,
 // taxa de ocupação, estatísticas de empresas, IDEB, mortalidade infantil,
 // infraestrutura hospitalar, saneamento, limites geográficos/malhas).
+// Novo UX (2026-09-29): mesorregiao/microrregiao/regiao/regiao_imediata
+// saíram do bloco "Território e geografia" porque agora aparecem no
+// painel de Localização (breadcrumb ao lado do mapa) — mantê-las também
+// aqui duplicaria a informação na mesma tela.
 const BLOCOS = [
-  { numero: '1', titulo: 'Território e geografia', chaves: ['mesorregiao', 'microrregiao', 'regiao', 'regiao_imediata', 'area_km2'] },
+  { numero: '1', titulo: 'Território e geografia', chaves: ['area_km2'] },
   { numero: '2', titulo: 'Demografia', chaves: ['populacao', 'populacao_censo_2022', 'densidade_hab_km2'] },
   { numero: '3', titulo: 'Economia e trabalho', chaves: ['pib_mil_reais', 'pib_per_capita'] },
   { numero: '4', titulo: 'Educação', chaves: ['taxa_alfabetizacao'] },
@@ -49,6 +53,25 @@ outrosDados.forEach((v) => {
   if (!outrosDadosPorFonte[fonte]) outrosDadosPorFonte[fonte] = [];
   outrosDadosPorFonte[fonte].push(v);
 });
+// Novo UX do Contexto do município (2026-09-29): faixa de KPIs (curadoria
+// dos itens mais importantes, na ordem abaixo — só entra o que existir),
+// painel de Localização (mapa + geografia) e os blocos temáticos viram
+// abas em vez de ficarem todos sempre abertos (motivo do usuário: "ficou
+// pesado"). Referência: página de município do IBGE Cidades, validada
+// antes com uma demo interativa.
+const ORDEM_KPIS = ['area_km2', 'populacao', 'densidade_hab_km2', 'pib_per_capita', 'taxa_alfabetizacao', 'populacao_censo_2022'];
+const kpis = ORDEM_KPIS.map((c) => dadosPorChave[c]).filter(Boolean).slice(0, 6);
+const CHAVES_GEOGRAFIA = ['mesorregiao', 'microrregiao', 'regiao_imediata', 'regiao'];
+const geografia = CHAVES_GEOGRAFIA.map((c) => dadosPorChave[c]).filter(Boolean);
+// "Fontes e notas": todo valor público exibido nesta tela, IBGE ou não —
+// já carrega fonte + período + data de coleta (regra de arquitetura da
+// seção 4), só faltava uma tela mostrando isso ao usuário.
+const fontesENotas = [...geografia, ...blocosComDados.flatMap((b) => b.itens), ...outrosDados].map((v) => ({
+  rotulo: rotuloChave(v.chave),
+  fonte: v.fonte_nome,
+  periodo: v.periodo_referencia || '—',
+  coletadoEm: v.coletado_em,
+}));
 const eixosComIndicadores = eixos.map((e) => ({
   ...e,
   itens: indicadores.filter((i) => i.eixo_codigo === e.codigo),
@@ -143,42 +166,127 @@ if (municipio.mandato_fim) {
   <% } else if (dadosPublicos.length === 0) { %>
     <p style="font-size:13px;color:var(--text-soft);margin-top:14px">Nenhum dado público coletado ainda. Use "Buscar agora" ou aguarde a próxima coleta em lote.</p>
   <% } else { %>
-    <% blocosComDados.forEach((bloco) => { %>
-      <div class="rsr-secao">
-        <div class="rsr-secao-titulo"><span class="rsr-secao-numero"><%= bloco.numero %></span> <%= bloco.titulo %></div>
-        <div class="rsr-stats-grid">
-          <% bloco.itens.forEach((v) => { %>
-            <div class="rsr-stat">
-              <div class="rsr-stat-rotulo"><%= rotuloChave(v.chave) %></div>
-              <div class="rsr-stat-valor"><%= formatarValor(v) %></div>
-              <div class="rsr-stat-fonte"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
-            </div>
-          <% }) %>
-        </div>
+    <% if (kpis.length > 0) { %>
+      <div class="rsr-kpi-grid" style="margin-top:16px">
+        <% kpis.forEach((v) => { %>
+          <div class="rsr-kpi">
+            <div class="rsr-kpi-rotulo"><%= rotuloChave(v.chave) %></div>
+            <div class="rsr-kpi-valor"><%= formatarValor(v) %></div>
+            <div class="rsr-kpi-periodo"><%= v.periodo_referencia || v.fonte_nome %></div>
+          </div>
+        <% }) %>
       </div>
-    <% }) %>
-    <% Object.keys(outrosDadosPorFonte).forEach((fonte, indice) => { %>
-      <div class="rsr-secao">
-        <div class="rsr-secao-titulo"><span class="rsr-secao-numero"><%= BLOCOS.length + indice + 1 %></span> Outros dados públicos · <%= fonte %></div>
-        <div class="rsr-stats-grid">
-          <% outrosDadosPorFonte[fonte].forEach((v) => { %>
-            <div class="rsr-stat" style="position:relative">
-              <div class="rsr-stat-rotulo"><%= rotuloChave(v.chave) %></div>
-              <div class="rsr-stat-valor"><%= formatarValor(v) %></div>
-              <div class="rsr-stat-fonte"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
-              <form method="POST" action="/municipios/<%= municipio.id %>/dados-publicos/excluir"
-                    onsubmit="return confirm('Excluir este dado importado? Isso remove o histórico dessa chave para esta fonte — pode subir o arquivo de novo depois, se precisar.')"
-                    style="position:absolute;top:10px;right:10px">
-                <input type="hidden" name="chave" value="<%= v.chave %>">
-                <input type="hidden" name="fonte_codigo" value="<%= v.fonte_codigo %>">
-                <button type="submit" title="Excluir este dado"
-                        style="background:none;border:none;color:var(--text-soft);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px">✕</button>
+    <% } %>
+
+    <div class="rsr-contexto-grid">
+      <div class="rsr-localizacao">
+        <div class="rsr-secao-titulo" style="margin-bottom:12px">Localização</div>
+        <div class="rsr-mapa-frame">
+          <% if (municipio.mapa_svg) { %>
+            <%- municipio.mapa_svg %>
+          <% } else { %>
+            <div class="rsr-mapa-vazio">
+              Mapa ainda não gerado.<br>
+              <form method="POST" action="/municipios/<%= municipio.id %>/mapa/regenerar" style="margin-top:8px">
+                <button class="rsr-btn rsr-btn-secundario" type="submit" style="height:32px;padding:0 12px;font-size:12px">Gerar mapa</button>
               </form>
             </div>
-          <% }) %>
+          <% } %>
         </div>
+        <% if (geografia.length > 0) { %>
+          <% geografia.forEach((g) => { %>
+            <div class="rsr-geografia-linha"><span><%= rotuloChave(g.chave) %></span><span><%= formatarValor(g) %></span></div>
+          <% }) %>
+        <% } %>
+        <% if (municipio.mapa_svg) { %>
+          <form method="POST" action="/municipios/<%= municipio.id %>/mapa/regenerar" style="margin-top:12px" onsubmit="return confirm('Regenerar o mapa? Só é necessário se os limites do município mudaram oficialmente.')">
+            <button class="rsr-btn rsr-btn-secundario" type="submit" style="height:30px;padding:0 10px;font-size:11px;width:100%">Regenerar mapa</button>
+          </form>
+        <% } %>
       </div>
-    <% }) %>
+
+      <div>
+        <% const idAbas = 'ctx-' + municipio.id; %>
+        <div class="rsr-abas" id="<%= idAbas %>">
+          <% blocosComDados.forEach((bloco, i) => { %>
+            <button type="button" class="rsr-aba-btn <%= i === 0 ? 'ativa' : '' %>" data-aba-alvo="<%= idAbas %>-<%= bloco.numero %>"><%= bloco.titulo %></button>
+          <% }) %>
+          <% if (Object.keys(outrosDadosPorFonte).length > 0) { %>
+            <button type="button" class="rsr-aba-btn <%= blocosComDados.length === 0 ? 'ativa' : '' %>" data-aba-alvo="<%= idAbas %>-outras">Outras fontes</button>
+          <% } %>
+        </div>
+
+        <% blocosComDados.forEach((bloco, i) => { %>
+          <div class="rsr-aba-painel <%= i === 0 ? 'ativa' : '' %>" id="<%= idAbas %>-<%= bloco.numero %>">
+            <div class="rsr-stats-grid">
+              <% bloco.itens.forEach((v) => { %>
+                <div class="rsr-stat">
+                  <div class="rsr-stat-rotulo"><%= rotuloChave(v.chave) %></div>
+                  <div class="rsr-stat-valor"><%= formatarValor(v) %></div>
+                  <div class="rsr-stat-fonte"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        <% }) %>
+
+        <% if (Object.keys(outrosDadosPorFonte).length > 0) { %>
+          <div class="rsr-aba-painel <%= blocosComDados.length === 0 ? 'ativa' : '' %>" id="<%= idAbas %>-outras">
+            <% Object.keys(outrosDadosPorFonte).forEach((fonte, indice) => { %>
+              <div class="<%= indice > 0 ? 'rsr-secao' : '' %>">
+                <% if (Object.keys(outrosDadosPorFonte).length > 1) { %>
+                  <div style="font-weight:700;font-size:13px;margin-bottom:10px"><%= fonte %></div>
+                <% } %>
+                <div class="rsr-stats-grid">
+                  <% outrosDadosPorFonte[fonte].forEach((v) => { %>
+                    <div class="rsr-stat" style="position:relative">
+                      <div class="rsr-stat-rotulo"><%= rotuloChave(v.chave) %></div>
+                      <div class="rsr-stat-valor"><%= formatarValor(v) %></div>
+                      <div class="rsr-stat-fonte"><%= v.fonte_nome %> · <%= v.periodo_referencia || '—' %></div>
+                      <form method="POST" action="/municipios/<%= municipio.id %>/dados-publicos/excluir"
+                            onsubmit="return confirm('Excluir este dado importado? Isso remove o histórico dessa chave para esta fonte — pode subir o arquivo de novo depois, se precisar.')"
+                            style="position:absolute;top:10px;right:10px">
+                        <input type="hidden" name="chave" value="<%= v.chave %>">
+                        <input type="hidden" name="fonte_codigo" value="<%= v.fonte_codigo %>">
+                        <button type="submit" title="Excluir este dado"
+                                style="background:none;border:none;color:var(--text-soft);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px">✕</button>
+                      </form>
+                    </div>
+                  <% }) %>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+
+        <details class="rsr-fontes-notas">
+          <summary>Fontes e notas</summary>
+          <% fontesENotas.forEach((f) => { %>
+            <div class="rsr-fontes-linha">
+              <span class="rsr-fontes-chave"><%= f.rotulo %></span>
+              <span class="rsr-fontes-meta"><%= f.fonte %></span>
+              <span class="rsr-fontes-meta">período <%= f.periodo %></span>
+            </div>
+          <% }) %>
+        </details>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        document.getElementById('<%- idAbas %>').addEventListener('click', function (evento) {
+          var botao = evento.target.closest('.rsr-aba-btn');
+          if (!botao) return;
+          var grupo = botao.parentElement;
+          grupo.querySelectorAll('.rsr-aba-btn').forEach(function (b) { b.classList.remove('ativa'); });
+          botao.classList.add('ativa');
+          var alvoId = botao.getAttribute('data-aba-alvo');
+          document.querySelectorAll('.rsr-aba-painel').forEach(function (p) { p.classList.remove('ativa'); });
+          var alvo = document.getElementById(alvoId);
+          if (alvo) alvo.classList.add('ativa');
+        });
+      })();
+    </script>
   <% } %>
 
   <% if (snapshot.length > 0) { %>

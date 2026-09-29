@@ -13,6 +13,12 @@
 
 const BASE_LOCALIDADES = 'https://servicodados.ibge.gov.br/api/v1/localidades/municipios';
 const BASE_AGREGADOS = 'https://servicodados.ibge.gov.br/api/v3/agregados';
+// API de malhas geograficas (limites municipais) — usada só para o mapa
+// estático do painel de Localização (seção 4/novo UX, decidido em
+// 2026-09-29). Antes ficava fora do escopo por exigir armazenar um
+// arquivo geoespacial; contornado guardando o SVG (texto) direto no
+// Postgres, sem precisar de disco persistente — ver migration 0006.
+const BASE_MALHAS = 'https://servicodados.ibge.gov.br/api/v3/malhas/municipios';
 
 // Agregado 6579 = Projecao da populacao residente (estimativa anual), variavel 9324.
 const AGREGADO_POPULACAO = 6579;
@@ -196,4 +202,33 @@ async function buscarDadosPublicos(codigoIbge) {
   return valores;
 }
 
-module.exports = { buscarLocalidade, buscarDadosPublicos };
+/**
+ * Busca o SVG do contorno do município na API de malhas do IBGE. Nunca
+ * lança — falha de rede aqui não pode travar o cadastro nem a exibição
+ * do painel de Localização (mesma regra das demais chamadas deste
+ * arquivo); a tela mostra um estado vazio quando isto retorna null.
+ */
+async function buscarMalhaSvg(codigoIbge) {
+  try {
+    // Timeout explicito: esta chamada e usada tanto em segundo-plano
+    // (cadastro/backfill) quanto de forma sincrona (botao "Regenerar
+    // mapa", que o usuario espera na tela) — sem isso, uma rede lenta ou
+    // instavel deixaria a requisicao pendurada indefinidamente em vez de
+    // cair no fallback de estado vazio.
+    const resposta = await fetch(`${BASE_MALHAS}/${codigoIbge}?formato=image/svg+xml`, {
+      headers: { Accept: 'image/svg+xml' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!resposta.ok) {
+      throw new Error(`IBGE (malhas) respondeu ${resposta.status}`);
+    }
+    const svg = await resposta.text();
+    if (!svg.includes('<svg')) throw new Error('resposta não é um SVG válido');
+    return svg;
+  } catch (erro) {
+    console.warn('[ibge] falha ao buscar malha (mapa)', codigoIbge, erro.message);
+    return null;
+  }
+}
+
+module.exports = { buscarLocalidade, buscarDadosPublicos, buscarMalhaSvg };
