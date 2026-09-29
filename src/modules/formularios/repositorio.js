@@ -47,13 +47,30 @@ async function listarPorMunicipio(tenant, municipioId) {
 
 // "Meus formularios": os disparados para o usuario logado, em qualquer
 // municipio que ele enxergue via RLS (na pratica, so o proprio).
+//
+// Bug encontrado em 2026-09-29 (relatado pelo usuario com print de tela):
+// f.status so tem 'pendente'/'respondido' — quando o master aprova a
+// resposta, so submissoes.status muda (fica 'aprovado'), NADA em
+// formularios e tocado. Resultado: pro destinatario, a tela ficava travada
+// em "Respondido — aguardando revisão" pra sempre, mesmo depois de
+// aprovado (so saia dessa mensagem se fosse REJEITADO, que reabre pra
+// 'pendente'). Corrigido trazendo junto o status da submissao mais
+// recente vinculada a cada formulario (LATERAL), que e quem de fato sabe
+// se foi aprovado — a view usa esse campo pra decidir o rotulo certo, em
+// vez de so f.status.
 async function listarParaDestinatario(tenant) {
   return withTenantContext(contextoDe(tenant), async (client) => {
     const { rows } = await client.query(
       `SELECT f.id, f.modelo, f.nome, f.descricao, f.status, f.criado_em, f.respondido_em,
-              m.nome AS municipio_nome
+              m.nome AS municipio_nome, s.status AS submissao_status
          FROM formularios f
          JOIN municipios m ON m.id = f.municipio_id
+         LEFT JOIN LATERAL (
+           SELECT status FROM submissoes
+            WHERE formulario_id = f.id
+            ORDER BY versao DESC
+            LIMIT 1
+         ) s ON true
         WHERE f.destinatario_id = $1
         ORDER BY f.status ASC, f.criado_em DESC`,
       [tenant.usuarioId]

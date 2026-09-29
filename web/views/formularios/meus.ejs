@@ -1,3 +1,20 @@
+<%
+// Bug 2026-09-29: o status do card de destinatário vinha só de
+// f.status ('pendente'/'respondido'), que nunca reflete a aprovação —
+// só a rejeição (que reabre pra 'pendente'). Quem sabe se já foi
+// aprovado é a submissão mais recente (f.submissao_status), trazida
+// pelo repositório.
+function rotuloParaDestinatario(f) {
+  if (f.status === 'pendente') return 'Pendente';
+  if (f.submissao_status === 'aprovado') return 'Aprovado';
+  return 'Respondido — aguardando revisão';
+}
+function corRotulo(f) {
+  if (f.status === 'pendente') return 'var(--text-soft)';
+  if (f.submissao_status === 'aprovado') return '#1a7f37';
+  return '#b8860b';
+}
+%>
 <%- include('../partials/shell-inicio', { titulo: 'Meus formulários', paginaAtiva: 'formularios', usuario: usuario, versao: versao }) %>
 <div class="rsr-toolbar">
   <h1>Meus formulários</h1>
@@ -16,7 +33,7 @@
               <td data-rotulo="Formulário"><%= f.nome %></td>
               <td data-rotulo="Município"><%= f.municipio_nome %></td>
               <td data-rotulo="Recebido em"><%= new Date(f.criado_em).toLocaleString('pt-BR') %></td>
-              <td data-rotulo="Status"><%= f.status === 'respondido' ? 'Respondido — aguardando revisão' : 'Pendente' %></td>
+              <td data-rotulo="Status"><span style="color:<%= corRotulo(f) %>;font-weight:600"><%= rotuloParaDestinatario(f) %></span></td>
               <td data-rotulo="">
                 <% if (f.status === 'pendente') { %>
                   <a class="rsr-btn rsr-btn-secundario" style="height:34px;padding:0 12px;font-size:12px;display:inline-flex;align-items:center;text-decoration:none" href="/formularios/<%= f.id %>/responder">Responder</a>
