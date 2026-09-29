@@ -1,35 +1,60 @@
 // Integracao com a API publica do Siconfi (Tesouro Nacional) — fonte
 // "api" da busca unica (secao 4 do mapeamento, 2026-09-29).
 //
-// Corrigido em 2026-09-29 apos teste em staging: a primeira versao usava
-// RGF-Anexo 01 (Despesa com Pessoal) para saude/educacao/divida e
-// RREO-Anexo 01 (Balanco Orcamentario) para Receita Corrente Liquida —
-// nenhum desses anexos contem essas linhas, entao a aba Financas ficava
-// sempre vazia. Anexos corretos, confirmados na documentacao oficial do
-// Tesouro (Regras Gerais e Instrucoes de Preenchimento do RREO/RGF):
-//   RREO-Anexo 01 — Balanco Orcamentario                          (despesa total)
-//   RREO-Anexo 03 — Demonstrativo da Receita Corrente Liquida     (receita corrente líquida)
-//   RREO-Anexo 08 — Demonstrativo das Receitas e Despesas com MDE (% educação)
-//   RREO-Anexo 09 — Demonstrativo das Receitas e Despesas com ASPS(% saúde)
-//   RGF-Anexo  02 — Demonstrativo da Dívida Consolidada Líquida   (dívida consolidada)
+// Historico desta integracao (2026-09-29, mesmo dia — 3 rodadas de
+// correcao com o usuario testando em staging a cada rodada):
 //
-// ATENCAO — ainda assim, o formato exato da resposta (nomes de linha
-// dentro de cada anexo) nao pode ser verificado a partir deste ambiente:
-// tanto a chamada direta quanto a leitura da documentacao viva
-// (apidatalake.tesouro.gov.br/docs/siconfi) batem no bloqueio de rede
-// desta sandbox. Os nomes de campo (conta/coluna/valor) e a numeracao
-// dos anexos foram confirmados via documentacao publica do Tesouro e
-// exemplos de terceiros ja em producao — mas os TEXTOS exatos das linhas
-// dentro de cada anexo (ex.: "% APLICADO..." vs "TOTAL DAS DESPESAS
-// COM...") ainda precisam ser confirmados com um municipio real em
-// staging. Por isso: (a) a extracao continua tolerante, procurando por
-// varios padroes de texto; (b) quando um anexo devolve linhas mas
-// nenhuma bate com os padroes esperados, o codigo registra no log do
-// servidor as primeiras contas encontradas — se a aba Financas continuar
-// incompleta, esses logs (buscados por "[siconfi] anexo sem padrao
-// esperado") mostram o texto real das linhas, o que resolve em um ciclo.
+// Rodada 1 (implementacao inicial): base URL e nomes de anexo "chutados"
+// a partir de documentacao de terceiros, sem conseguir testar contra a
+// API real (bloqueada nesta sandbox). Resultado: aba Financas sempre
+// vazia.
+//
+// Rodada 2: corrigi os NUMEROS dos anexos (RREO-Anexo 03 pra RCL,
+// RGF-Anexo 02 pra divida, etc.) — ainda baseado em doc de terceiros, sem
+// testar ao vivo. O usuario testou em staging e os logs mostraram TODAS
+// as chamadas voltando 404 — nao era so o numero do anexo, era a URL
+// BASE inteira que estava errada.
+//
+// Rodada 3 (esta): consegui, via WebFetch, alcancar de fato a API real
+// (algo que curl/fetch direto desta sandbox nao conseguem — bloqueio de
+// rede so no /agent-proxy usado por eles) e confirmei contra um municipio
+// real (Sao Paulo, 3550308, RREO 2024/6º bimestre, RGF 2024/3º
+// quadrimestre) três coisas importantes:
+//
+//   1) A URL base certa e' .../ords/siconfi/tt/ — no' de Oracle REST Data
+//      Services (ORDS) — NUNCA foi .../api/. Esse "/api/" usado nas duas
+//      rodadas anteriores nao existe: e' por isso que TUDO voltava 404,
+//      nao so um anexo ou outro.
+//
+//   2) Cada "conta" de um anexo vem repetida em varias linhas — uma por
+//      "coluna" (ex.: "PREVISÃO INICIAL", "<MR-3>", "TOTAL (ÚLTIMOS 12
+//      MESES)", "Até o 2º Quadrimestre"...). Um match so pelo texto da
+//      conta (como nas rodadas 1-2) pega a PRIMEIRA linha que aparecer —
+//      quase sempre a coluna errada, com um numero que nao e' o total
+//      que queremos. Corrigido usando o campo `cod_conta` (identificador
+//      estavel, ex. "RREO3ReceitaCorrenteLiquida") pra achar o grupo de
+//      linhas certo, e so' depois escolhendo a `coluna` certa dentro dele.
+//
+//   3) % investido em saúde e % investido em educação NÃO EXISTEM no
+//      Siconfi — confirmado no manual oficial do Tesouro (Regras Gerais
+//      RREO 2025): esses dois demonstrativos (MDE/ASPS) são entregues a
+//      sistemas separados — SIOPE (educação) e SIOPS (saúde) — não ao
+//      Siconfi. Por isso esses dois campos foram REMOVIDOS desta
+//      integração (não é um bug corrigível aqui; é fonte de dado
+//      diferente, fora do escopo atual). Se algum dia entrarem, é uma
+//      integração nova com SIOPE/SIOPS, não um ajuste deste arquivo.
+//
+// Contas confirmadas contra a API real (São Paulo, 2024):
+//   RREO-Anexo 01 → cod_conta "DespesasExcetoIntraOrcamentarias"
+//                    (conta "DESPESAS (EXCETO INTRA-ORÇAMENTÁRIAS) (VIII)")
+//   RREO-Anexo 03 → cod_conta "RREO3ReceitaCorrenteLiquida"
+//                    (conta "RECEITA CORRENTE LÍQUIDA (III) = (I - II)",
+//                     coluna "TOTAL (ÚLTIMOS 12 MESES)")
+//   RGF-Anexo  02 → cod_conta "DividaConsolidadaLiquida"
+//                    (conta "DÍVIDA CONSOLIDADA LÍQUIDA (DCL) (III) = (I - II)",
+//                     coluna "Até o Xº Quadrimestre", X = o quadrimestre pedido)
 
-const BASE = 'https://apidatalake.tesouro.gov.br/api';
+const BASE = 'https://apidatalake.tesouro.gov.br/ords/siconfi/tt';
 
 async function buscarJson(url) {
   const resposta = await fetch(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) });
@@ -38,20 +63,35 @@ async function buscarJson(url) {
   return Array.isArray(corpo?.items) ? corpo.items : Array.isArray(corpo) ? corpo : [];
 }
 
-function acharValorPorConta(linhas, padroesTexto, rotuloDebug) {
-  const linha = linhas.find((l) => {
-    const texto = String(l.conta ?? l.coluna ?? l.rotulo ?? '').toUpperCase();
-    return padroesTexto.some((p) => texto.includes(p));
-  });
-  if (!linha) {
+// Acha o valor certo dentro de um anexo: primeiro filtra pelo grupo de
+// linhas do `cod_conta` pedido (identificador estavel, nao muda entre
+// periodos), depois escolhe a `coluna` certa dentro desse grupo — sem
+// isso, um match so por texto da conta pega a primeira linha que
+// aparecer (ex.: um unico mês, em vez do total acumulado).
+function acharValorPorCodConta(linhas, codConta, padroesColuna, rotuloDebug) {
+  const doGrupo = linhas.filter((l) => l.cod_conta === codConta);
+  if (doGrupo.length === 0) {
     if (linhas.length > 0 && rotuloDebug) {
-      const amostra = linhas.slice(0, 8).map((l) => l.conta ?? l.coluna ?? l.rotulo ?? '(sem campo conta/coluna/rotulo)');
-      console.warn(`[siconfi] anexo sem padrão esperado (${rotuloDebug}) — contas recebidas:`, amostra);
+      const amostra = [...new Set(linhas.map((l) => l.cod_conta || l.conta || '(sem cod_conta/conta)'))].slice(0, 10);
+      console.warn(`[siconfi] anexo sem cod_conta esperado (${rotuloDebug}, procurado: "${codConta}") — cod_conta recebidos:`, amostra);
     }
     return null;
   }
-  const bruto = linha.valor ?? linha.vl_conta ?? linha.value;
-  const valor = Number(String(bruto).replace(',', '.'));
+  for (const padrao of padroesColuna) {
+    const linha = doGrupo.find((l) => String(l.coluna ?? '').toUpperCase().includes(padrao.toUpperCase()));
+    if (linha) {
+      const valor = Number(String(linha.valor).replace(',', '.'));
+      return Number.isNaN(valor) ? null : valor;
+    }
+  }
+  // Nenhuma coluna preferida bateu — loga as colunas reais pra ajuste, mas
+  // ainda devolve a primeira linha do grupo em vez de nada (melhor um
+  // numero aproximado, sinalizado no log, do que a aba vazia de novo).
+  if (rotuloDebug) {
+    const colunas = doGrupo.map((l) => l.coluna);
+    console.warn(`[siconfi] cod_conta "${codConta}" achado (${rotuloDebug}), mas nenhuma coluna esperada bateu — colunas recebidas:`, colunas);
+  }
+  const valor = Number(String(doGrupo[0].valor).replace(',', '.'));
   return Number.isNaN(valor) ? null : valor;
 }
 
@@ -63,7 +103,6 @@ function periodosRreo(tentativas = 3) {
   const hoje = new Date();
   const anoAtual = hoje.getUTCFullYear();
   const bimestreAtual = Math.ceil((hoje.getUTCMonth() + 1) / 2);
-  // comeca no bimestre anterior ao vigente (o vigente ainda nao fechou)
   let ano = anoAtual;
   let bimestre = bimestreAtual > 1 ? bimestreAtual - 1 : 6;
   if (bimestreAtual === 1) ano -= 1;
@@ -94,9 +133,6 @@ function periodosRgf(tentativas = 2) {
   return lista;
 }
 
-// Busca um anexo do RREO, tentando periodos anteriores se o mais recente
-// vier vazio (ente ainda nao declarou). Retorna a primeira resposta
-// nao-vazia, ou linhas: [] se nenhum periodo tentado tiver dado.
 async function buscarRreoAnexo(codigoIbge, noAnexo) {
   for (const { ano, bimestre } of periodosRreo()) {
     const params = new URLSearchParams({
@@ -132,65 +168,53 @@ async function buscarRgfAnexo(codigoIbge, noAnexo) {
     try {
       const linhas = await buscarJson(`${BASE}/rgf?${params.toString()}`);
       if (linhas.length > 0) {
-        return { linhas, periodo: `RGF ${ano}, ${quadrimestre}º quadrimestre` };
+        return { linhas, periodo: `RGF ${ano}, ${quadrimestre}º quadrimestre`, quadrimestre };
       }
     } catch (erro) {
       console.warn(`[siconfi] falha ao buscar ${noAnexo}`, codigoIbge, ano, quadrimestre, erro.message);
     }
   }
-  return { linhas: [], periodo: null };
+  return { linhas: [], periodo: null, quadrimestre: null };
 }
 
 async function buscarDadosFinanceiros(codigoIbge) {
-  const [balanco, rcl, mde, asps, divida] = await Promise.all([
+  const [balanco, rcl, divida] = await Promise.all([
     buscarRreoAnexo(codigoIbge, 'RREO-Anexo 01'), // Balanço Orçamentário → despesa total
     buscarRreoAnexo(codigoIbge, 'RREO-Anexo 03'), // Receita Corrente Líquida
-    buscarRreoAnexo(codigoIbge, 'RREO-Anexo 08'), // MDE (educação)
-    buscarRreoAnexo(codigoIbge, 'RREO-Anexo 09'), // ASPS (saúde)
     buscarRgfAnexo(codigoIbge, 'RGF-Anexo 02'),   // Dívida Consolidada Líquida
   ]);
 
   const valores = [];
 
-  const receitaCorrente = acharValorPorConta(
+  const receitaCorrente = acharValorPorCodConta(
     rcl.linhas,
-    ['RECEITA CORRENTE LÍQUIDA', 'RECEITA CORRENTE LIQUIDA'],
+    'RREO3ReceitaCorrenteLiquida',
+    ['TOTAL (ÚLTIMOS 12 MESES)'],
     'RREO-Anexo 03 / receita corrente líquida'
   );
   if (receitaCorrente !== null) {
     valores.push({ chave: 'siconfi_receita_corrente_liquida', valorNumerico: receitaCorrente, periodoReferencia: rcl.periodo });
   }
 
-  const despesaTotal = acharValorPorConta(
+  const despesaTotal = acharValorPorCodConta(
     balanco.linhas,
-    ['DESPESAS EMPENHADAS', 'DESPESA TOTAL', 'TOTAL DAS DESPESAS'],
+    'DespesasExcetoIntraOrcamentarias',
+    ['EMPENHADAS ATÉ O BIMESTRE', 'ATÉ O BIMESTRE', 'EMPENHADAS NO BIMESTRE'],
     'RREO-Anexo 01 / despesa total'
   );
   if (despesaTotal !== null) {
     valores.push({ chave: 'siconfi_despesa_total', valorNumerico: despesaTotal, periodoReferencia: balanco.periodo });
   }
 
-  const pctSaude = acharValorPorConta(
-    asps.linhas,
-    ['% APLICADO', 'PERCENTUAL APLICADO', 'MÍNIMO CONSTITUCIONAL', 'MINIMO CONSTITUCIONAL'],
-    'RREO-Anexo 09 / % saúde'
-  );
-  if (pctSaude !== null) {
-    valores.push({ chave: 'siconfi_pct_saude', valorNumerico: pctSaude, periodoReferencia: asps.periodo });
-  }
+  // % saúde e % educação NÃO vêm do Siconfi — ver comentário no topo do
+  // arquivo (esses demonstrativos vão para SIOPS/SIOPE, sistemas
+  // separados). Removidos desta integração em 2026-09-29.
 
-  const pctEducacao = acharValorPorConta(
-    mde.linhas,
-    ['% APLICADO', 'PERCENTUAL APLICADO', 'MÍNIMO CONSTITUCIONAL', 'MINIMO CONSTITUCIONAL'],
-    'RREO-Anexo 08 / % educação'
-  );
-  if (pctEducacao !== null) {
-    valores.push({ chave: 'siconfi_pct_educacao', valorNumerico: pctEducacao, periodoReferencia: mde.periodo });
-  }
-
-  const dividaConsolidada = acharValorPorConta(
+  const colunaDivida = divida.quadrimestre ? `Até o ${divida.quadrimestre}º Quadrimestre` : 'Quadrimestre';
+  const dividaConsolidada = acharValorPorCodConta(
     divida.linhas,
-    ['DÍVIDA CONSOLIDADA LÍQUIDA', 'DIVIDA CONSOLIDADA LIQUIDA'],
+    'DividaConsolidadaLiquida',
+    [colunaDivida, 'Quadrimestre'],
     'RGF-Anexo 02 / dívida consolidada'
   );
   if (dividaConsolidada !== null) {
