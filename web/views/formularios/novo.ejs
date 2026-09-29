@@ -1,0 +1,90 @@
+<%- include('../partials/shell-inicio', { titulo: 'Novo formulário · ' + municipio.nome, paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1>Novo formulário — <%= municipio.nome %></h1>
+  <a href="/municipios/<%= municipio.id %>/formularios" style="font-size:13px">← Voltar</a>
+</div>
+
+<% if (erro) { %><div class="rsr-erro" style="margin-bottom:16px"><%= erro %></div><% } %>
+
+<div class="rsr-card">
+  <form method="POST" action="/municipios/<%= municipio.id %>/formularios" id="form-novo-formulario">
+    <div class="rsr-form-grid">
+      <div>
+        <label class="rsr-label">Modelo</label>
+        <select class="rsr-input" name="modelo" id="select-modelo" required>
+          <% modelosDisponiveis.forEach((m) => { %>
+            <option value="<%= m.codigo %>"><%= m.nome %></option>
+          <% }) %>
+          <option value="personalizado">— Personalizado (montar do zero) —</option>
+        </select>
+      </div>
+      <div>
+        <label class="rsr-label">Destinatário</label>
+        <select class="rsr-input" name="destinatario_id" required>
+          <option value="">Selecione…</option>
+          <% destinatarios.forEach((u) => { %>
+            <option value="<%= u.id %>"><%= u.nome %> — <%= u.perfil %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+
+    <div id="bloco-personalizado" style="display:none;margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+      <div class="rsr-secao-titulo">Campos do formulário</div>
+      <label class="rsr-label" style="margin-top:10px">Nome do formulário</label>
+      <input class="rsr-input" type="text" name="nome_personalizado" placeholder="Ex.: Levantamento setor de obras">
+      <div id="linhas-campos" style="margin-top:14px;display:flex;flex-direction:column;gap:8px"></div>
+      <button type="button" class="rsr-btn rsr-btn-secundario" id="botao-add-campo" style="margin-top:10px;width:auto;padding:0 16px">+ Adicionar campo</button>
+    </div>
+
+    <div style="margin-top:22px">
+      <button class="rsr-btn rsr-btn-primario" type="submit" style="padding:0 24px;width:auto">Enviar formulário</button>
+    </div>
+  </form>
+</div>
+
+<template id="modelo-linha-campo">
+  <div style="display:flex;gap:8px;align-items:center">
+    <input class="rsr-input" type="text" name="campo_rotulo" placeholder="Rótulo do campo (ex.: Setor)" style="flex:2">
+    <select class="rsr-input" name="campo_tipo" style="flex:1">
+      <% tiposCampoPersonalizado.forEach((t) => { %>
+        <option value="<%= t.valor %>"><%= t.rotulo %></option>
+      <% }) %>
+    </select>
+    <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap">
+      <input type="checkbox" name="campo_obrigatorio" class="campo-obrigatorio-checkbox"> Obrigatório
+    </label>
+  </div>
+</template>
+
+<script>
+  (function () {
+    var selectModelo = document.getElementById('select-modelo');
+    var blocoPersonalizado = document.getElementById('bloco-personalizado');
+    var linhasCampos = document.getElementById('linhas-campos');
+    var modeloLinha = document.getElementById('modelo-linha-campo');
+    var contador = 0;
+
+    function adicionarLinha() {
+      var fragmento = modeloLinha.content.cloneNode(true);
+      var checkbox = fragmento.querySelector('.campo-obrigatorio-checkbox');
+      checkbox.value = String(contador);
+      contador += 1;
+      linhasCampos.appendChild(fragmento);
+    }
+
+    function atualizarVisibilidade() {
+      var personalizado = selectModelo.value === 'personalizado';
+      blocoPersonalizado.style.display = personalizado ? 'block' : 'none';
+      if (personalizado && linhasCampos.children.length === 0) {
+        adicionarLinha();
+        adicionarLinha();
+      }
+    }
+
+    document.getElementById('botao-add-campo').addEventListener('click', adicionarLinha);
+    selectModelo.addEventListener('change', atualizarVisibilidade);
+    atualizarVisibilidade();
+  })();
+</script>
+<%- include('../partials/shell-fim', { versao: versao }) %>

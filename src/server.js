@@ -10,6 +10,8 @@ const rotasMunicipios = require('./modules/municipios/rotas');
 const rotasUsuarios = require('./modules/usuarios/rotas');
 const rotasIndicadores = require('./modules/indicadores/rotas');
 const rotasCentralAtualizacoes = require('./modules/central-atualizacoes/rotas');
+const rotasPlanilhas = require('./modules/planilhas/rotas');
+const rotasFormularios = require('./modules/formularios/rotas');
 
 const app = express();
 
@@ -60,6 +62,8 @@ app.use('/', exigirAutenticacao, rotasMunicipios);
 app.use('/', exigirAutenticacao, rotasUsuarios);
 app.use('/', exigirAutenticacao, rotasIndicadores);
 app.use('/', exigirAutenticacao, rotasCentralAtualizacoes);
+app.use('/', exigirAutenticacao, rotasPlanilhas);
+app.use('/', exigirAutenticacao, rotasFormularios);
 
 app.get('/painel', exigirAutenticacao, (req, res) => {
   res.render('painel', { usuario: req.tenant.usuario, versao: env.RESSOAR_VERSION });

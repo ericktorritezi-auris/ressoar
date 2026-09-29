@@ -1,0 +1,46 @@
+<%- include('../partials/shell-inicio', { titulo: 'Responder · ' + formulario.nome, paginaAtiva: 'formularios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1><%= formulario.nome %></h1>
+  <a href="/formularios" style="font-size:13px">← Voltar</a>
+</div>
+
+<% if (formulario.descricao) { %>
+  <p style="font-size:13px;color:var(--text-soft);margin:-6px 0 18px"><%= formulario.descricao %></p>
+<% } %>
+
+<% if (erro) { %><div class="rsr-erro" style="margin-bottom:16px"><%= erro %></div><% } %>
+
+<div class="rsr-card">
+  <form method="POST" action="/formularios/<%= formulario.id %>/responder">
+    <div class="rsr-form-grid">
+      <% formulario.campos.forEach((c) => { %>
+        <div style="<%= (c.tipo === 'texto_longo') ? 'grid-column:1/-1' : '' %>">
+          <label class="rsr-label"><%= c.rotulo %><%= c.obrigatorio ? ' *' : '' %></label>
+          <% if (c.tipo === 'texto_longo') { %>
+            <textarea class="rsr-input" name="<%= c.chave %>" rows="3" <%= c.obrigatorio ? 'required' : '' %>></textarea>
+          <% } else if (c.tipo === 'numero') { %>
+            <input class="rsr-input" type="number" step="any" name="<%= c.chave %>" <%= c.obrigatorio ? 'required' : '' %>>
+          <% } else if (c.tipo === 'data') { %>
+            <input class="rsr-input" type="date" name="<%= c.chave %>" <%= c.obrigatorio ? 'required' : '' %>>
+          <% } else if (c.tipo === 'escala_1_5') { %>
+            <select class="rsr-input" name="<%= c.chave %>" <%= c.obrigatorio ? 'required' : '' %>>
+              <option value="">Selecione…</option>
+              <% [1,2,3,4,5].forEach((n) => { %><option value="<%= n %>"><%= n %></option><% }) %>
+            </select>
+          <% } else if (c.tipo === 'selecao') { %>
+            <select class="rsr-input" name="<%= c.chave %>" <%= c.obrigatorio ? 'required' : '' %>>
+              <option value="">Selecione…</option>
+              <% (c.opcoes || []).forEach((op) => { %><option value="<%= op %>"><%= op %></option><% }) %>
+            </select>
+          <% } else { %>
+            <input class="rsr-input" type="text" name="<%= c.chave %>" <%= c.obrigatorio ? 'required' : '' %>>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+    <div style="margin-top:22px">
+      <button class="rsr-btn rsr-btn-primario" type="submit" style="padding:0 24px;width:auto">Enviar resposta</button>
+    </div>
+  </form>
+</div>
+<%- include('../partials/shell-fim', { versao: versao }) %>

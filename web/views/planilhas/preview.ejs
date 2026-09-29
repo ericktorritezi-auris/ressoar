@@ -1,0 +1,40 @@
+<%- include('../partials/shell-inicio', { titulo: 'Pré-visualização · ' + municipio.nome, paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1>Pré-visualização — <%= origem %></h1>
+  <a href="/municipios/<%= municipio.id %>/planilhas/nova" style="font-size:13px">← Escolher outro arquivo</a>
+</div>
+
+<p style="font-size:13px;color:var(--text-soft);margin:-6px 0 18px">
+  Confira as linhas antes de confirmar. Linhas sem correspondência no catálogo de indicadores ainda podem ser
+  importadas, mas ficam marcadas — o master decide na hora de aprovar.
+</p>
+
+<div class="rsr-card">
+  <div class="rsr-table-wrap">
+    <table class="rsr-table">
+      <thead><tr><th>Indicador</th><th>Valor</th><th>Período</th><th>Situação</th></tr></thead>
+      <tbody>
+        <% linhas.forEach((l) => { %>
+          <tr>
+            <td data-rotulo="Indicador"><%= l.indicadorTexto %></td>
+            <td data-rotulo="Valor"><%= l.valorNumerico !== null ? l.valorNumerico : (l.valorTexto || '—') %></td>
+            <td data-rotulo="Período"><%= l.periodoReferencia || '—' %></td>
+            <td data-rotulo="Situação">
+              <% if (l.indicadorId) { %>
+                <span style="color:#1a7f37">Indicador reconhecido</span>
+              <% } else { %>
+                <span style="color:#b8860b">Sem indicador correspondente no catálogo</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <form method="POST" action="/municipios/<%= municipio.id %>/planilhas" style="margin-top:20px">
+    <input type="hidden" name="origem" value="<%= origem %>">
+    <input type="hidden" name="linhas_json" value='<%- linhasJson.replace(/'/g, "&#39;") %>'>
+    <button class="rsr-btn rsr-btn-primario" type="submit" style="padding:0 24px;width:auto">Confirmar importação</button>
+  </form>
+</div>
+<%- include('../partials/shell-fim', { versao: versao }) %>

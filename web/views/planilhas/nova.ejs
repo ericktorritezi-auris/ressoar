@@ -1,0 +1,23 @@
+<%- include('../partials/shell-inicio', { titulo: 'Importar planilha · ' + municipio.nome, paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1>Importar planilha — <%= municipio.nome %></h1>
+  <a href="/municipios/<%= municipio.id %>/planilhas" style="font-size:13px">← Voltar</a>
+</div>
+
+<% if (erro) { %><div class="rsr-erro" style="margin-bottom:16px"><%= erro %></div><% } %>
+
+<div class="rsr-card">
+  <ol style="font-size:13px;color:var(--text-soft);margin:0 0 20px;padding-left:18px;line-height:1.7">
+    <li>Baixe o <a href="/municipios/<%= municipio.id %>/planilhas/modelo">modelo em CSV</a> — já vem com uma linha por indicador ativo do catálogo.</li>
+    <li>Preencha as colunas "valor" e "periodo_referencia" (não altere a coluna "indicador").</li>
+    <li>Suba o arquivo preenchido abaixo — a próxima tela mostra uma pré-visualização antes de confirmar.</li>
+  </ol>
+  <form method="POST" action="/municipios/<%= municipio.id %>/planilhas/preview" enctype="multipart/form-data">
+    <label class="rsr-label">Arquivo CSV preenchido</label>
+    <input class="rsr-input" type="file" name="arquivo" accept=".csv,text/csv" required>
+    <div style="margin-top:22px">
+      <button class="rsr-btn rsr-btn-primario" type="submit" style="padding:0 24px;width:auto">Pré-visualizar</button>
+    </div>
+  </form>
+</div>
+<%- include('../partials/shell-fim', { versao: versao }) %>

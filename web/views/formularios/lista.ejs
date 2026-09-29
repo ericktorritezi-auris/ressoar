@@ -1,0 +1,43 @@
+<%
+function rotuloStatus(s) {
+  if (s === 'respondido') return 'Respondido';
+  return 'Aguardando resposta';
+}
+%>
+<%- include('../partials/shell-inicio', { titulo: 'Formulários · ' + municipio.nome, paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <div>
+    <h1>Formulários — <%= municipio.nome %></h1>
+    <a href="/municipios/<%= municipio.id %>" style="font-size:13px">← Voltar ao município</a>
+  </div>
+  <a class="rsr-btn rsr-btn-primario" style="padding:0 18px;display:inline-flex;align-items:center;text-decoration:none" href="/municipios/<%= municipio.id %>/formularios/novo">Novo formulário</a>
+</div>
+
+<p style="font-size:13px;color:var(--text-soft);margin:-6px 0 18px">
+  Envie um formulário pronto (NR-1, nine box, pesquisa de clima, dados institucionais) ou monte um do zero, e
+  dispare para um usuário do município. A resposta entra na mesma fila de aprovação das planilhas.
+</p>
+
+<% if (formularios.length === 0) { %>
+  <div class="rsr-card rsr-vazio">Nenhum formulário disparado ainda.</div>
+<% } else { %>
+  <div class="rsr-card">
+    <div class="rsr-table-wrap">
+      <table class="rsr-table">
+        <thead><tr><th>Formulário</th><th>Destinatário</th><th>Criado em</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <% formularios.forEach((f) => { %>
+            <tr>
+              <td data-rotulo="Formulário"><%= f.nome %></td>
+              <td data-rotulo="Destinatário"><%= f.destinatario_nome %></td>
+              <td data-rotulo="Criado em"><%= new Date(f.criado_em).toLocaleString('pt-BR') %></td>
+              <td data-rotulo="Status"><%= rotuloStatus(f.status) %></td>
+              <td data-rotulo=""><a href="/municipios/<%= municipio.id %>/formularios/<%= f.id %>" style="font-size:13px">Ver</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% } %>
+<%- include('../partials/shell-fim', { versao: versao }) %>
