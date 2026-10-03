@@ -15,6 +15,10 @@
     <% } else { %>
       <a class="rsr-navitem <%= paginaAtiva === 'formularios' ? 'ativo' : '' %>" href="/formularios">Meus formulários</a>
     <% } %>
+    <a class="rsr-navitem <%= paginaAtiva === 'bi' ? 'ativo' : '' %>" href="/bi">Análise (BI)</a>
+    <a class="rsr-navitem <%= paginaAtiva === 'alertas' ? 'ativo' : '' %>" href="/alertas">
+      Alertas<% if (typeof alertasNaoLidos !== 'undefined' && alertasNaoLidos > 0) { %> <span class="rsr-badge rsr-badge-coral"><%= alertasNaoLidos %></span><% } %>
+    </a>
     <div style="margin-top:auto">
       <a class="rsr-navitem" href="/ajuda">Ajuda</a>
       <form method="POST" action="/logout">

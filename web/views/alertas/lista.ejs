@@ -1,0 +1,57 @@
+<%- include('../partials/shell-inicio', { titulo: 'Alertas', paginaAtiva: 'alertas', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1>Alertas</h1>
+</div>
+
+<% if (formulariosPendentes.length > 0) { %>
+  <div class="rsr-card" style="margin-bottom:16px">
+    <h2 style="margin:0 0 10px;font-size:15px">Formulários pendentes</h2>
+    <table class="rsr-table">
+      <thead><tr><th>Formulário</th><th>Destinatário</th>
+        <% if (['master','gestor_carteira'].includes(usuario.perfil)) { %><th>Município</th><% } %>
+        <th>Desde</th></tr></thead>
+      <tbody>
+        <% formulariosPendentes.forEach((f) => { %>
+          <tr>
+            <td><%= f.nome %></td>
+            <td><%= f.destinatario_nome %></td>
+            <% if (['master','gestor_carteira'].includes(usuario.perfil)) { %><td><%= f.municipio_nome %></td><% } %>
+            <td><%= new Date(f.criado_em).toLocaleDateString('pt-BR') %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+
+<div class="rsr-card">
+  <h2 style="margin:0 0 10px;font-size:15px">Alertas do sistema</h2>
+  <% if (alertas.length === 0) { %>
+    <p style="margin:0;font-size:13px;color:var(--text-soft)">Nenhum alerta no momento.</p>
+  <% } else { %>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <% alertas.forEach((a) => { %>
+        <div style="border:1px solid var(--border);border-radius:10px;padding:14px;<%= a.lido_em ? 'opacity:0.55' : '' %>">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
+            <div>
+              <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:<%= a.nivel === 'critico' ? '#FF8A65' : a.nivel === 'atencao' ? '#5B4BDB' : 'var(--text-soft)' %>">
+                <%= a.nivel %>
+              </span>
+              <h3 style="margin:4px 0 4px;font-size:14px"><%= a.titulo %></h3>
+              <p style="margin:0;font-size:13px;color:var(--text-soft)"><%= a.mensagem %></p>
+              <% if (['master','gestor_carteira'].includes(usuario.perfil)) { %>
+                <p style="margin:6px 0 0;font-size:12px;color:var(--text-soft)"><%= a.municipio_nome %></p>
+              <% } %>
+            </div>
+            <% if (!a.lido_em) { %>
+              <form method="POST" action="/alertas/<%= a.id %>/marcar-lido">
+                <button class="rsr-btn" type="submit" style="font-size:12px">Marcar como lido</button>
+              </form>
+            <% } %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+<%- include('../partials/shell-fim', { versao: versao }) %>

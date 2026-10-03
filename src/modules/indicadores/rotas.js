@@ -83,4 +83,47 @@ router.post('/municipios/:municipioId/indicadores/:id', exigirMaster, async (req
   res.redirect(`/municipios/${req.params.municipioId}`);
 });
 
+// Serie temporal (Fase 4): lancar/ver os valores realizados de um
+// indicador ao longo do tempo — e o que alimenta dashboards e o cubo de
+// self-service BI (sem isto so existia o metadado meta/linha de base).
+router.get('/municipios/:municipioId/indicadores/:id/valores', exigirMaster, async (req, res) => {
+  const municipio = await municipiosRepo.buscarPorId(req.tenant, req.params.municipioId);
+  const indicador = await repo.buscarPorId(req.tenant, req.params.id);
+  if (!municipio || !indicador) return res.status(404).send('Não encontrado.');
+  const valores = await repo.listarValoresPorIndicador(req.tenant, req.params.id);
+  res.render('indicadores/valores', {
+    usuario: req.tenant.usuario,
+    versao: req.app.locals.versao,
+    municipio,
+    indicador,
+    valores,
+    erro: null,
+  });
+});
+
+router.post('/municipios/:municipioId/indicadores/:id/valores', exigirMaster, async (req, res) => {
+  const { periodo_referencia: periodoReferencia, valor_numerico: valorNumerico } = req.body;
+  try {
+    await repo.registrarValor(req.tenant, req.params.id, {
+      municipioId: req.params.municipioId,
+      periodoReferencia,
+      valorNumerico,
+    });
+    res.redirect(`/municipios/${req.params.municipioId}/indicadores/${req.params.id}/valores`);
+  } catch (erro) {
+    console.error('[indicadores] erro ao registrar valor', erro);
+    const municipio = await municipiosRepo.buscarPorId(req.tenant, req.params.municipioId);
+    const indicador = await repo.buscarPorId(req.tenant, req.params.id);
+    const valores = await repo.listarValoresPorIndicador(req.tenant, req.params.id);
+    res.status(400).render('indicadores/valores', {
+      usuario: req.tenant.usuario,
+      versao: req.app.locals.versao,
+      municipio,
+      indicador,
+      valores,
+      erro: 'Não foi possível salvar o valor. Confira o período e o número informados.',
+    });
+  }
+});
+
 module.exports = router;

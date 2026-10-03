@@ -61,4 +61,7 @@
     </div>
   </form>
 </div>
+<% if (indicador) { %>
+  <p style="margin-top:16px"><a href="/municipios/<%= municipio.id %>/indicadores/<%= indicador.id %>/valores">Lançar/ver valores ao longo do tempo →</a></p>
+<% } %>
 <%- include('../partials/shell-fim', { versao: versao }) %>

@@ -1,0 +1,23 @@
+<%- include('../partials/shell-inicio', { titulo: 'Painel', paginaAtiva: 'painel', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1>Painel — Carteira de municípios</h1>
+</div>
+
+<div class="rsr-card">
+  <% if (municipios.length === 0) { %>
+    <p style="margin:0;font-size:13px;color:var(--text-soft)">Nenhum município cadastrado ainda.</p>
+  <% } else { %>
+    <table class="rsr-table">
+      <thead><tr><th>Município</th><th>UF</th></tr></thead>
+      <tbody>
+        <% municipios.forEach((m) => { %>
+          <tr>
+            <td><a href="/municipios/<%= m.id %>/dashboard"><%= m.nome %></a></td>
+            <td><%= m.uf %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+<%- include('../partials/shell-fim', { versao: versao }) %>

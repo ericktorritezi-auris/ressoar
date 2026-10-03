@@ -1,0 +1,47 @@
+<%- include('../partials/shell-inicio', { titulo: 'Valores do indicador', paginaAtiva: 'municipios', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1>Valores — <%= indicador.nome %></h1>
+  <a href="/municipios/<%= municipio.id %>/indicadores/<%= indicador.id %>/editar" style="font-size:13px">← Voltar ao indicador</a>
+</div>
+
+<% if (erro) { %><div class="rsr-erro" style="margin-bottom:16px"><%= erro %></div><% } %>
+
+<div class="rsr-card" style="margin-bottom:16px">
+  <p style="margin:0 0 14px;font-size:13px;color:var(--text-soft)">
+    Lançamento manual (nesta fase). Os valores lançados aqui alimentam os
+    dashboards fixos e o cubo de self-service BI — a importação automática
+    a partir de planilha/formulário respondido fica para uma próxima
+    iteração deste módulo.
+  </p>
+  <form method="POST" action="/municipios/<%= municipio.id %>/indicadores/<%= indicador.id %>/valores" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+    <div>
+      <label class="rsr-label">Período de referência</label>
+      <input class="rsr-input" type="text" name="periodo_referencia" placeholder="Ex.: 2026-01, 2026-Q2, 2026" required>
+    </div>
+    <div>
+      <label class="rsr-label">Valor (<%= indicador.unidade || 'sem unidade' %>)</label>
+      <input class="rsr-input" type="number" step="any" name="valor_numerico" required>
+    </div>
+    <button class="rsr-btn rsr-btn-primario" type="submit" style="padding:0 20px;width:auto">Lançar</button>
+  </form>
+</div>
+
+<div class="rsr-card">
+  <% if (valores.length === 0) { %>
+    <p style="margin:0;font-size:13px;color:var(--text-soft)">Nenhum valor lançado ainda.</p>
+  <% } else { %>
+    <table class="rsr-table">
+      <thead><tr><th>Período</th><th>Valor</th><th>Lançado em</th></tr></thead>
+      <tbody>
+        <% valores.slice().reverse().forEach((v) => { %>
+          <tr>
+            <td><%= v.periodo_referencia %></td>
+            <td><%= v.valor_numerico %></td>
+            <td><%= new Date(v.registrado_em).toLocaleString('pt-BR') %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+<%- include('../partials/shell-fim', { versao: versao }) %>

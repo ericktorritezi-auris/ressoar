@@ -101,4 +101,31 @@ async function buscarPorEmail(tenant, email) {
   });
 }
 
-module.exports = { listar, buscarPorId, criar, atualizar, buscarPorEmail };
+// Preferencia de dashboard (Fase 4 — secao 3 do mapeamento): quais dos 5
+// relatorios fixos por eixo o usuario escolheu manter visiveis. NULL =
+// todos (padrao, antes de qualquer customizacao).
+async function buscarEixosAtivosDashboard(tenant, usuarioId) {
+  return withTenantContext(contextoDe(tenant), async (client) => {
+    const { rows } = await client.query('SELECT dashboard_eixos_ativos FROM usuarios WHERE id = $1', [usuarioId]);
+    return rows[0] ? rows[0].dashboard_eixos_ativos : null;
+  });
+}
+
+async function atualizarEixosAtivosDashboard(tenant, usuarioId, eixosAtivos) {
+  return withTenantContext(contextoDe(tenant), (client) =>
+    client.query('UPDATE usuarios SET dashboard_eixos_ativos = $1 WHERE id = $2', [
+      eixosAtivos && eixosAtivos.length > 0 ? eixosAtivos : null,
+      usuarioId,
+    ])
+  );
+}
+
+module.exports = {
+  listar,
+  buscarPorId,
+  criar,
+  atualizar,
+  buscarPorEmail,
+  buscarEixosAtivosDashboard,
+  atualizarEixosAtivosDashboard,
+};

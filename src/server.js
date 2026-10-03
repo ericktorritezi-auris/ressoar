@@ -12,6 +12,10 @@ const rotasIndicadores = require('./modules/indicadores/rotas');
 const rotasCentralAtualizacoes = require('./modules/central-atualizacoes/rotas');
 const rotasPlanilhas = require('./modules/planilhas/rotas');
 const rotasFormularios = require('./modules/formularios/rotas');
+const rotasDashboards = require('./modules/dashboards/rotas');
+const rotasSelfServiceBi = require('./modules/self-service-bi/rotas');
+const rotasAlertas = require('./modules/alertas/rotas');
+const alertasRepo = require('./modules/alertas/repositorio');
 
 const app = express();
 
@@ -52,6 +56,25 @@ app.use(
 app.use(tenantMiddleware);
 app.use(express.static(path.join(__dirname, '..', 'web', 'public')));
 
+// Contagem de alertas nao lidos para o badge do sino no menu lateral
+// (shell-inicio.ejs, incluido por toda tela autenticada). Registrado aqui
+// — depois do static, antes de qualquer router — pra valer pra TODAS as
+// rotas de pagina, sem rodar pra cada asset estatico (css/js). So CONTA o
+// que ja esta materializado, nao recalcula a cada requisicao (isso e caro
+// e so acontece ao abrir /alertas); o numero pode por isso ficar
+// levemente desatualizado ate a proxima visita aa tela de alertas, o que
+// e aceitavel para um badge informativo.
+app.use(async (req, res, next) => {
+  if (!req.tenant.autenticado) return next();
+  try {
+    res.locals.alertasNaoLidos = await alertasRepo.contarNaoLidos(req.tenant);
+  } catch (erro) {
+    console.error('[alertas] erro ao contar nao lidos', erro);
+    res.locals.alertasNaoLidos = 0;
+  }
+  next();
+});
+
 // Health-check: usado pelo Railway para saber se o servico esta de pe.
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', versao: env.RESSOAR_VERSION });
@@ -65,9 +88,12 @@ app.use('/', exigirAutenticacao, rotasCentralAtualizacoes);
 app.use('/', exigirAutenticacao, rotasPlanilhas);
 app.use('/', exigirAutenticacao, rotasFormularios);
 
-app.get('/painel', exigirAutenticacao, (req, res) => {
-  res.render('painel', { usuario: req.tenant.usuario, versao: env.RESSOAR_VERSION });
-});
+// Fase 4 (docs/mapeamento-fase4-bi-dashboards.md): dashboards fixos por
+// eixo substituem o antigo stub de /painel; self-service BI (cubo com
+// guardrail) e o sino de alertas sao modulos novos.
+app.use('/', exigirAutenticacao, rotasDashboards);
+app.use('/', exigirAutenticacao, rotasSelfServiceBi);
+app.use('/', exigirAutenticacao, rotasAlertas);
 
 app.get('/ajuda', exigirAutenticacao, (req, res) => {
   res.render('ajuda', { usuario: req.tenant.usuario, versao: env.RESSOAR_VERSION });

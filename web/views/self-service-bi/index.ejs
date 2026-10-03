@@ -1,0 +1,71 @@
+<%- include('../partials/shell-inicio', { titulo: 'Análise (BI)', paginaAtiva: 'bi', usuario: usuario, versao: versao }) %>
+<div class="rsr-toolbar">
+  <h1>Análise (self-service BI)</h1>
+</div>
+
+<div class="rsr-card" style="margin-bottom:16px">
+  <form method="POST" action="/bi/consultar" style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+    <div>
+      <label class="rsr-label">Município</label>
+      <select class="rsr-input" name="municipio_id" required>
+        <% municipios.forEach((m) => { %>
+          <option value="<%= m.id %>" <%= selecao && selecao.municipioId === m.id ? 'selected' : '' %>><%= m.nome %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
+      <label class="rsr-label">Fonte</label>
+      <select class="rsr-input" name="fonte" id="rsr-bi-fonte" required>
+        <% fontes.forEach((f) => { %>
+          <option value="<%= f.codigo %>" <%= selecao && selecao.fonte === f.codigo ? 'selected' : '' %>><%= f.rotulo %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
+      <label class="rsr-label">Métrica</label>
+      <select class="rsr-input" name="metrica" required>
+        <% fontes.forEach((f) => { f.metricas.forEach((m) => { %>
+          <option value="<%= m.codigo %>" data-fonte="<%= f.codigo %>" <%= selecao && selecao.metrica === m.codigo ? 'selected' : '' %>><%= m.rotulo %></option>
+        <% }) }) %>
+      </select>
+    </div>
+    <div>
+      <label class="rsr-label">Dimensão (agrupar por)</label>
+      <select class="rsr-input" name="dimensao" required>
+        <% dimensoes.forEach((d) => { %>
+          <option value="<%= d.codigo %>" <%= selecao && selecao.dimensao === d.codigo ? 'selected' : '' %>><%= d.rotulo %></option>
+        <% }) %>
+      </select>
+    </div>
+    <button class="rsr-btn rsr-btn-primario" type="submit" style="padding:0 22px;width:auto">Gerar</button>
+  </form>
+  <p style="margin:12px 0 0;font-size:12px;color:var(--text-soft)">
+    Nem toda combinação de dimensão e fonte existe de verdade (ex.: "Eixo do
+    programa" só se aplica a Indicadores) — se você escolher um cruzamento
+    que não faz sentido, o sistema avisa em vez de mostrar um gráfico vazio.
+  </p>
+</div>
+
+<% if (aviso) { %>
+  <div class="rsr-erro" style="margin-bottom:16px"><%= aviso %></div>
+<% } %>
+
+<% if (resultado && resultado.length > 0) { %>
+  <div class="rsr-card">
+    <% const maior = Math.max(...resultado.map((r) => Math.abs(r.valor)), 1); %>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <% resultado.forEach((r) => { %>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+            <span><%= r.rotulo %></span>
+            <span style="font-weight:700"><%= Math.round(r.valor * 100) / 100 %></span>
+          </div>
+          <div style="background:var(--bg-sunken);border-radius:6px;height:10px;overflow:hidden">
+            <div style="background:var(--accent);height:100%;width:<%= Math.max(2, (Math.abs(r.valor) / maior) * 100) %>%"></div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+<% } %>
+<%- include('../partials/shell-fim', { versao: versao }) %>
